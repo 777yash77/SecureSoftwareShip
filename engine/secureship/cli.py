@@ -36,27 +36,33 @@ CLI_DESCRIPTION = """[bold cyan]🛡️ SecureShip[/bold cyan] — [bold white]S
 
 Audit and evaluate codebases for hardcoded secrets, AST-based SAST code flaws, vulnerable dependencies (SCA), and Docker / K8s misconfigurations (IaC) directly in your terminal before shipping to production.
 
-[bold yellow]QUICK EXAMPLES:[/bold yellow]
+[bold yellow]QUICK EXAMPLES & POPULAR COMMANDS:[/bold yellow]
   [cyan]secureship scan[/cyan]                               Scan current folder (all categories)
   [cyan]secureship scan ./my-project[/cyan]                  Scan a specific project folder
   [cyan]secureship scan --modify-score <N>[/cyan]             Set custom passing score threshold to N% (e.g. 50, 65, 75, 85, 90; default: 80)
   [cyan]secureship scan --modify-score 70%[/cyan]             Supports percentages with or without '%' symbol
-  [cyan]secureship scan --strict-sca[/cyan]                   Block push if ANY dependency vulnerability (even with 99 score)
+  [cyan]secureship scan --strict-sca[/cyan]                   Block push if ANY dependency vulnerability exists (even with 99 score)
   [cyan]secureship scan --strict-iac[/cyan]                   Block push if ANY Docker/K8s misconfiguration is detected
   [cyan]secureship scan --strict-sec[/cyan]                   Block push if ANY hardcoded secret/token is detected
   [cyan]secureship scan --strict-sast[/cyan]                  Block push if ANY SAST code vulnerability is detected
-  [cyan]secureship scan --sec[/cyan]                         Scan [bold red]ONLY Secrets[/bold red] (AWS keys, GitHub tokens, .env)
-  [cyan]secureship scan --iac[/cyan]                         Scan [bold red]ONLY Container & IaC[/bold red] (Docker, Compose, K8s)
-  [cyan]secureship scan --sast[/cyan]                        Scan [bold red]ONLY SAST code flaws[/bold red] (SQLi, XSS, RCE, MD5)
-  [cyan]secureship scan --sca[/cyan]                         Scan [bold red]ONLY Dependencies[/bold red] (CVEs in package.json, requirements)
-  [cyan]secureship scan --fail-on high[/cyan]                Enforce Shift-Left Gate (exit 1 if High/Critical)
+  [cyan]secureship scan --confidence high[/cyan]              High-accuracy filter (filters out false positives)
+  [cyan]secureship scan --sec[/cyan]                         Scan [bold red]ONLY Secrets[/bold red] (AWS keys, GitHub tokens, .env, Stripe, Slack)
+  [cyan]secureship scan --iac[/cyan]                         Scan [bold red]ONLY Container & IaC[/bold red] (Dockerfile, Compose, K8s)
+  [cyan]secureship scan --sast[/cyan]                        Scan [bold red]ONLY SAST code flaws[/bold red] (SQLi, SSRF, XSS, RCE, Path Traversal)
+  [cyan]secureship scan --sca[/cyan]                         Scan [bold red]ONLY Dependencies[/bold red] (CVEs in package.json, requirements, pom.xml)
+  [cyan]secureship scan --fail-on high[/cyan]                Enforce Shift-Left Gate (exit 1 if High/Critical findings exist)
   [cyan]secureship scan --ignore[/cyan]                      [bold yellow]Emergency Override:[/bold yellow] ignore quality gate for git push
   [cyan]secureship scan --format html -o report.html[/cyan]  Generate printable standalone HTML report
+  [cyan]secureship scan --format sarif -o report.sarif[/cyan] Generate SARIF v2.1.0 report for GitHub Code Scanning
   [cyan]secureship scan --staged[/cyan]                      Pre-commit mode: scan only Git staged lines
   [cyan]secureship config --min-score 70[/cyan]              Persist custom 70% threshold into .secureshiprc for Git hooks
-  [cyan]secureship rules[/cyan]                              List all built-in security detection rules
-  [cyan]secureship explain SAST-PY-001[/cyan]                Get AI / Expert exploit analysis & fix
-  [cyan]secureship history[/cyan]                            View previous scans & security score trends
+  [cyan]secureship config --strict-sca[/cyan]                Persist strict zero-tolerance SCA policy in .secureshiprc
+  [cyan]secureship config --min-confidence high[/cyan]       Persist high-accuracy gate in .secureshiprc
+  [cyan]secureship config --show[/cyan]                       Display current quality gate settings
+  [cyan]secureship rules[/cyan]                              List all 35+ built-in security detection rules
+  [cyan]secureship rules --category SECRETS[/cyan]           Filter rules by category (SECRETS, SAST, SCA, IAC)
+  [cyan]secureship explain SAST-PY-001[/cyan]                Get AI / Expert exploit analysis & patch for a rule
+  [cyan]secureship history[/cyan]                            View previous scans & security score trends from SQLite
   [cyan]secureship certificate ./my-project[/cyan]           Generate executive Ship Readiness Certificate
   [cyan]secureship install-hook[/cyan]                       Install automated Git [bold green]pre-commit[/bold green] & [bold green]pre-push[/bold green] gates
   [cyan]secureship bypass --push[/cyan]                       Authorize emergency bypass token & execute git push
@@ -64,6 +70,7 @@ Audit and evaluate codebases for hardcoded secrets, AST-based SAST code flaws, v
   [cyan]secureship update --token ghp_...[/cyan]            Fetch update from private GitHub repository with PAT
   [cyan]secureship update --check[/cyan]                     Check for remote updates without applying
   [cyan]secureship serve --port 8787[/cyan]                  Launch Web Security Dashboard on port 8787
+  [cyan]secureship version[/cyan]                            Display installed SecureShip version
 """
 
 
@@ -885,6 +892,34 @@ def main_callback(
     ctx: typer.Context,
     update: bool = typer.Option(False, "--update", help="Fetch & apply latest updates from GitHub"),
     version: bool = typer.Option(False, "--version", "-v", help="Show SecureShip version and exit"),
+    modify_score: Optional[str] = typer.Option(
+        None,
+        "--modify-score",
+        "--modify_score",
+        "--min-score",
+        "--modify-score-to",
+        help="Quick scan with custom score threshold (e.g. 50, 65, 75, 80, 90 or 65%)",
+    ),
+    strict_sca: bool = typer.Option(
+        False, "--strict-sca", "--strict-SCA", help="Quick scan with strict zero-tolerance SCA policy"
+    ),
+    strict_iac: bool = typer.Option(
+        False,
+        "--strict-iac",
+        "--strict-IAC",
+        "--strict-iat",
+        "--strict-IAT",
+        help="Quick scan with strict zero-tolerance IaC policy",
+    ),
+    strict_sec: bool = typer.Option(
+        False, "--strict-sec", "--strict-SEC", help="Quick scan with strict zero-tolerance Secret policy"
+    ),
+    strict_sast: bool = typer.Option(
+        False, "--strict-sast", "--strict-SAST", help="Quick scan with strict zero-tolerance SAST policy"
+    ),
+    confidence: Optional[str] = typer.Option(
+        None, "--confidence", "--min-confidence", "--accuracy", help="Quick scan with accuracy filter: high, medium, low"
+    ),
 ) -> None:
     """SecureShip root options handler."""
     if version:
@@ -894,6 +929,25 @@ def main_callback(
         code = run_self_update()
         raise typer.Exit(code=code)
     if ctx.invoked_subcommand is None:
+        if (
+            modify_score is not None
+            or strict_sca
+            or strict_iac
+            or strict_sec
+            or strict_sast
+            or confidence is not None
+        ):
+            # Run scan directly with specified flags on current directory
+            scan(
+                path=".",
+                min_score=modify_score,
+                strict_sca=strict_sca,
+                strict_iac=strict_iac,
+                strict_sec=strict_sec,
+                strict_sast=strict_sast,
+                confidence=confidence,
+            )
+            raise typer.Exit(code=0)
         typer.echo(ctx.get_help())
         raise typer.Exit(code=0)
 
