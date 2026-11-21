@@ -10,6 +10,18 @@ def test_cli_version():
     assert "SecureShip v1.0.0" in result.output
 
 
+def test_cli_version_flag():
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert "SecureShip v1.0.0" in result.output
+
+
+def test_cli_no_args_shows_help():
+    result = runner.invoke(app, [])
+    assert result.exit_code == 0
+    assert "Usage" in result.output or "Commands" in result.output
+
+
 def test_cli_scan_demo_app():
     # Scanning demo-vulnerable-app with --format json
     result = runner.invoke(app, ["scan", "./demo-vulnerable-app", "--format", "json"])

@@ -749,7 +749,7 @@ def bypass(
     typer.secho(f"Reason:  {reason}", fg=typer.colors.WHITE)
     typer.secho(f"Author:  {token_data['author']}", fg=typer.colors.WHITE)
     typer.secho("Status:  Authorized for the next 'git push'.", fg=typer.colors.CYAN)
-    typer.secho("Audit:   Security event logged for compliance verification.\n", fg=typer.colors.DIM)
+    typer.secho("Audit:   Security event logged for compliance verification.\n", dim=True)
 
     if push:
         typer.secho("🚀 Executing 'git push' with authorized bypass...\n", fg=typer.colors.GREEN, bold=True)
@@ -791,8 +791,9 @@ def version() -> None:
     typer.echo("SecureShip v1.0.0 — Shift-Left DevSecOps Gate")
 
 
-@app.callback()
+@app.callback(invoke_without_command=True)
 def main_callback(
+    ctx: typer.Context,
     update: bool = typer.Option(False, "--update", help="Fetch & apply latest updates from GitHub"),
     version: bool = typer.Option(False, "--version", "-v", help="Show SecureShip version and exit"),
 ) -> None:
@@ -803,6 +804,9 @@ def main_callback(
     if update:
         code = run_self_update()
         raise typer.Exit(code=code)
+    if ctx.invoked_subcommand is None:
+        typer.echo(ctx.get_help())
+        raise typer.Exit(code=0)
 
 
 def main() -> None:
