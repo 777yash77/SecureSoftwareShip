@@ -203,9 +203,22 @@ fail the build or git push:
   # Block push if ANY SAST code flaw exists:
   secureship scan --strict-sast
 
+  # High-accuracy scan (filters out false positives):
+  secureship scan --confidence high
+
 SAVE AS PERMANENT REPO POLICY (.secureshiprc):
-  secureship config --min-score 70 --strict-sca
+  secureship config --min-score 70 --strict-sca --min-confidence high
   secureship config --show
+
+AUTO-UPDATE FROM GITHUB:
+  # Check for updates:
+  secureship update --check
+
+  # Apply latest update:
+  secureship update
+
+  # Update from private GitHub repository with token:
+  secureship update --token ghp_YourPATHere
 
 ================================================================================
 5. LAUNCHING THE WEB DASHBOARD
@@ -256,8 +269,11 @@ Emergency Override (Audited Hotfix):
 """
 
     (staging_dir / "README.txt").write_text(readme_content, encoding="utf-8")
-    (staging_dir / "README.md").write_text(readme_content, encoding="utf-8")
-    print("[+] Generated README.txt and README.md inside package")
+    if (repo_root / "README.md").exists():
+        shutil.copy2(repo_root / "README.md", staging_dir / "README.md")
+    else:
+        (staging_dir / "README.md").write_text(readme_content, encoding="utf-8")
+    print("[+] Generated README.txt and copied comprehensive README.md inside package")
 
     # 8. Create Zip Archive
     print(f"[*] Compressing {staging_dir.name} into {zip_output.name}...")
