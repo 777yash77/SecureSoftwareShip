@@ -261,39 +261,47 @@ def scan(
     parsed_min_score = parse_score_threshold(min_score)
     engine = SecureShipEngine(target_path=str(target_path), categories=categories_to_pass)
 
-    if staged:
-        result = engine.scan_staged(
-            min_severity=min_sev_enum,
-            min_score=parsed_min_score,
-            strict_categories=strict_to_pass,
-            min_confidence=min_conf_enum,
-        )
-    else:
-        result = engine.scan(
-            min_severity=min_sev_enum,
-            min_score=parsed_min_score,
-            strict_categories=strict_to_pass,
-            min_confidence=min_conf_enum,
-        )
+    try:
+        if staged:
+            result = engine.scan_staged(
+                min_severity=min_sev_enum,
+                min_score=parsed_min_score,
+                strict_categories=strict_to_pass,
+                min_confidence=min_conf_enum,
+            )
+        else:
+            result = engine.scan(
+                min_severity=min_sev_enum,
+                min_score=parsed_min_score,
+                strict_categories=strict_to_pass,
+                min_confidence=min_conf_enum,
+            )
+    except Exception as e:
+        typer.secho(f"\n❌ Error during security scan execution: {e}\n", fg=typer.colors.RED, bold=True, err=True)
+        raise typer.Exit(code=1)
 
     # Render according to requested format
     fmt = format.lower()
     report_text = ""
 
-    if fmt == "json":
-        report_text = render_json_report(result)
-        if not output:
-            print(report_text)
-    elif fmt == "html":
-        report_text = render_html_report(result)
-        if not output:
-            print(report_text)
-    elif fmt == "sarif":
-        report_text = render_sarif_report(result)
-        if not output:
-            print(report_text)
-    else:  # default table / console
-        render_console_report(result)
+    try:
+        if fmt == "json":
+            report_text = render_json_report(result)
+            if not output:
+                print(report_text)
+        elif fmt == "html":
+            report_text = render_html_report(result)
+            if not output:
+                print(report_text)
+        elif fmt == "sarif":
+            report_text = render_sarif_report(result)
+            if not output:
+                print(report_text)
+        else:  # default table / console
+            render_console_report(result)
+    except Exception as e:
+        typer.secho(f"Error rendering scan report: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
 
     # Write to file if requested
     if output:
@@ -425,7 +433,11 @@ def config(
         current_stricts.add("SAST")
 
     updates["strict_categories"] = sorted(list(current_stricts))
-    saved_path = save_config(target, updates)
+    try:
+        saved_path = save_config(target, updates)
+    except Exception as e:
+        typer.secho(f"Error saving configuration to '{target}': {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
 
     typer.secho(f"\n✅ Updated SecureShip quality gate configuration in {saved_path}:", fg=typer.colors.GREEN, bold=True)
     if "min_score" in updates:
@@ -473,6 +485,11 @@ def rules(
         ("SEC-003", "SECRETS", "Generic API", "High Shannon-entropy unknown API key or secret token", "CWE-798 / A07:2021"),
         ("SEC-004", "SECRETS", "Crypto / SSH", "Unencrypted RSA, OpenSSH, or EC Private Key in plaintext", "CWE-312 / A02:2021"),
         ("SEC-005", "SECRETS", "Databases", "Database connection URI with embedded password", "CWE-798 / A07:2021"),
+        ("SEC-007", "SECRETS", "AI Platform", "Hardcoded OpenAI, Anthropic, or HuggingFace API key", "CWE-798 / A07:2021"),
+        ("SEC-008", "SECRETS", "Slack / Chat", "Exposed Slack Incoming Webhook URL", "CWE-798 / A07:2021"),
+        ("SEC-009", "SECRETS", "Stripe / Payments", "Hardcoded Stripe live secret key (sk_live_...)", "CWE-798 / A07:2021"),
+        ("SEC-010", "SECRETS", "Google Cloud", "Hardcoded Google Cloud / Firebase API key (AIza...)", "CWE-798 / A07:2021"),
+        ("SEC-011", "SECRETS", "Credentials", "Hardcoded plain-text password in variable assignment", "CWE-798 / A07:2021"),
         ("SAST-PY-001", "SAST", "Python SQL", "SQL Injection via dynamic f-string or string formatting in execute()", "CWE-89 / A03:2021"),
         ("SAST-PY-002", "SAST", "Python OS", "Command Injection via os.system() with dynamic input", "CWE-78 / A03:2021"),
         ("SAST-PY-003", "SAST", "Python Subprocess", "Command Injection via subprocess with shell=True", "CWE-78 / A03:2021"),
@@ -482,21 +499,39 @@ def rules(
         ("SAST-PY-007", "SAST", "Python Crypto", "Weak cryptographic hash algorithm (MD5 / SHA1)", "CWE-328 / A02:2021"),
         ("SAST-PY-008", "SAST", "Python Flask/Django", "Production DEBUG mode enabled (DEBUG = True)", "CWE-489 / A05:2021"),
         ("SAST-PY-009", "SAST", "Python Network", "Service bound to all network interfaces (0.0.0.0)", "CWE-1327 / A05:2021"),
+        ("SAST-PY-010", "SAST", "Python HTTP", "Server-Side Request Forgery (SSRF) via dynamic requests/httpx URL", "CWE-918 / A10:2021"),
+        ("SAST-PY-011", "SAST", "Python Files", "Path Traversal / Arbitrary File Read in open() or send_file()", "CWE-22 / A01:2021"),
+        ("SAST-PY-012", "SAST", "Python Marshal", "Insecure Deserialization via marshal or shelve", "CWE-502 / A08:2021"),
+        ("SAST-PY-014", "SAST", "Python XML", "Insecure XML parsing vulnerable to XML External Entity (XXE)", "CWE-611 / A05:2021"),
         ("SAST-JS-001", "SAST", "JavaScript", "Code injection via eval()", "CWE-95 / A03:2021"),
         ("SAST-JS-002", "SAST", "JavaScript DOM", "Cross-Site Scripting (XSS) via unescaped innerHTML", "CWE-79 / A03:2021"),
         ("SAST-JS-003", "SAST", "JavaScript SQL", "SQL Injection via string concatenation in query()", "CWE-89 / A03:2021"),
         ("SAST-JS-004", "SAST", "Node.js ChildProc", "Command Injection via child_process.exec()", "CWE-78 / A03:2021"),
         ("SAST-JS-005", "SAST", "Node.js TLS", "Disabled TLS verification (rejectUnauthorized: false)", "CWE-295 / A02:2021"),
         ("SAST-JS-006", "SAST", "Node.js JWT", "Hardcoded JWT secret or weak signature key", "CWE-798 / A07:2021"),
+        ("SAST-JS-007", "SAST", "Node.js HTTP", "Server-Side Request Forgery (SSRF) via axios/fetch with dynamic URL", "CWE-918 / A10:2021"),
+        ("SAST-JS-008", "SAST", "Node.js Files", "Arbitrary File Read / Path Traversal in fs.readFile()", "CWE-22 / A01:2021"),
+        ("SAST-JS-009", "SAST", "Node.js Objects", "Prototype Pollution via unconstrained Object.assign or deep merge", "CWE-1321 / A03:2021"),
+        ("SAST-JS-010", "SAST", "Node.js Express", "Permissive Wildcard CORS Configuration (origin: '*')", "CWE-942 / A05:2021"),
+        ("SAST-JS-011", "SAST", "Node.js Cookies", "Insecure Cookie Settings missing httpOnly or secure flags", "CWE-614 / A05:2021"),
         ("IAC-DOCKER-001", "IAC", "Dockerfile", "Container running as root (missing USER nonroot directive)", "CWE-250 / A05:2021"),
         ("IAC-DOCKER-002", "IAC", "Dockerfile", "Unpinned base image tag (:latest or untagged)", "CWE-1188 / A05:2021"),
         ("IAC-DOCKER-003", "IAC", "Dockerfile", "Secrets embedded in ENV or ARG build parameters", "CWE-798 / A07:2021"),
+        ("IAC-DOCKER-004", "IAC", "Dockerfile", "Dangerous ADD instruction in Dockerfile instead of COPY", "CWE-829 / A05:2021"),
+        ("IAC-DOCKER-005", "IAC", "Dockerfile", "Insecure pipe from curl or wget to shell (curl | sh)", "CWE-78 / A03:2021"),
         ("IAC-COMPOSE-001", "IAC", "Docker Compose", "Service running with privileged: true (host takeover risk)", "CWE-250 / A05:2021"),
         ("IAC-COMPOSE-002", "IAC", "Docker Compose", "Sensitive DB port (5432, 3306, 6379) bound to 0.0.0.0", "CWE-668 / A05:2021"),
+        ("IAC-COMPOSE-003", "IAC", "Docker Compose", "Docker daemon socket (/var/run/docker.sock) mounted in container", "CWE-250 / A05:2021"),
+        ("IAC-COMPOSE-004", "IAC", "Docker Compose", "Host Network Mode (network_mode: 'host') enabled", "CWE-668 / A05:2021"),
         ("IAC-K8S-001", "IAC", "Kubernetes", "Container missing CPU / Memory resource limits (DoS risk)", "CWE-770 / A05:2021"),
         ("IAC-K8S-002", "IAC", "Kubernetes", "Pod running with privileged securityContext (node escape)", "CWE-250 / A05:2021"),
+        ("IAC-K8S-003", "IAC", "Kubernetes", "Container allows privilege escalation (allowPrivilegeEscalation: true)", "CWE-250 / A05:2021"),
+        ("IAC-K8S-004", "IAC", "Kubernetes", "Container root filesystem is writable (readOnlyRootFilesystem: false)", "CWE-250 / A05:2021"),
         ("SCA-CVE20208203", "SCA", "npm:lodash", "Prototype Pollution in lodash < 4.17.21 (CVE-2020-8203)", "CWE-1321 / A06:2021"),
         ("SCA-CVE202223529", "SCA", "npm:jsonwebtoken", "Remote Code Execution in jsonwebtoken < 9.0.0 (CVE-2022-23529)", "CWE-502 / A06:2021"),
+        ("SCA-CVE202434064", "SCA", "pypi:jinja2", "HTML Attribute Injection in Jinja2 < 3.1.4 (CVE-2024-34064)", "CWE-79 / A06:2021"),
+        ("SCA-CVE202434069", "SCA", "pypi:werkzeug", "Predictable Debugger PIN in Werkzeug < 3.0.3 (CVE-2024-34069)", "CWE-330 / A06:2021"),
+        ("SCA-CVE202350447", "SCA", "pypi:pillow", "Arbitrary Code Execution in Pillow < 10.0.1 (CVE-2023-50447)", "CWE-94 / A06:2021"),
     ]
 
     for rid, cat, tech, desc, cwe_owasp in rules_catalog:
@@ -557,8 +592,12 @@ def history(
     limit: int = typer.Option(10, "--limit", "-n", help="Number of past scans to display")
 ) -> None:
     """Display past scan history and security score trajectory from local SQLite storage."""
-    db = HistoryDB()
-    recent = db.get_recent_scans(limit=limit)
+    try:
+        db = HistoryDB()
+        recent = db.get_recent_scans(limit=limit)
+    except Exception as e:
+        typer.secho(f"Error accessing scan history database: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
 
     if not recent:
         console.print("[dim]No scan history found in ~/.secureship/history.db. Run 'secureship scan' to create your first scan.[/dim]")
@@ -601,9 +640,17 @@ def certificate(
         if (repo_root / cleaned).exists():
             target_path = (repo_root / cleaned).resolve()
 
-    engine = SecureShipEngine(target_path=str(target_path))
-    result = engine.scan()
-    cert_html = render_certificate_report(result)
+    if not target_path.exists():
+        typer.secho(f"Error: Target path '{path}' does not exist on disk.", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2)
+
+    try:
+        engine = SecureShipEngine(target_path=str(target_path))
+        result = engine.scan()
+        cert_html = render_certificate_report(result)
+    except Exception as e:
+        typer.secho(f"Error generating audit certificate: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
 
     try:
         out_file = Path(output).resolve()
@@ -630,12 +677,13 @@ def install_hook(
         typer.secho(f"Error: No .git directory found at '{repo_path}'. Run inside a valid Git repository.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
 
-    hooks_dir = git_dir / "hooks"
-    hooks_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        hooks_dir = git_dir / "hooks"
+        hooks_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Pre-Commit Hook (Scans staged changes fast)
-    commit_hook = hooks_dir / "pre-commit"
-    commit_content = """#!/usr/bin/env bash
+        # 1. Pre-Commit Hook (Scans staged changes fast)
+        commit_hook = hooks_dir / "pre-commit"
+        commit_content = """#!/usr/bin/env bash
 # SecureShip Git Pre-Commit Hook (Automated Shift-Left Security Gate)
 echo "🛡️  SecureShip: Scanning staged changes before commit..."
 
@@ -656,23 +704,23 @@ fi
 echo "✅ SecureShip: Staged changes verified. Proceeding with commit."
 exit 0
 """
-    commit_hook.write_text(commit_content, encoding="utf-8")
+        commit_hook.write_text(commit_content, encoding="utf-8")
 
-    bat_commit = hooks_dir / "pre-commit.bat"
-    bat_commit.write_text(
-        "@echo off\n"
-        "echo 🛡️  SecureShip: Scanning staged changes before commit...\n"
-        "secureship scan --staged --fail-on high\n"
-        "if %ERRORLEVEL% NEQ 0 (\n"
-        "    echo ❌ Commit rejected by SecureShip.\n"
-        "    exit /b 1\n"
-        ")\n",
-        encoding="utf-8"
-    )
+        bat_commit = hooks_dir / "pre-commit.bat"
+        bat_commit.write_text(
+            "@echo off\n"
+            "echo 🛡️  SecureShip: Scanning staged changes before commit...\n"
+            "secureship scan --staged --fail-on high\n"
+            "if %ERRORLEVEL% NEQ 0 (\n"
+            "    echo ❌ Commit rejected by SecureShip.\n"
+            "    exit /b 1\n"
+            ")\n",
+            encoding="utf-8"
+        )
 
-    # 2. Pre-Push Hook (Validates full project quality gate before git push)
-    push_hook = hooks_dir / "pre-push"
-    push_content = """#!/usr/bin/env bash
+        # 2. Pre-Push Hook (Validates full project quality gate before git push)
+        push_hook = hooks_dir / "pre-push"
+        push_content = """#!/usr/bin/env bash
 # SecureShip Git Pre-Push Hook (Automated Shift-Left Pipeline Gate)
 echo "🛡️  SecureShip: Running Pre-Push Security Audit & Ship-Readiness Check..."
 
@@ -713,40 +761,43 @@ fi
 echo "✅ SecureShip: Quality gate approved. Code is ready to ship. Proceeding with push!"
 exit 0
 """
-    push_hook.write_text(push_content, encoding="utf-8")
+        push_hook.write_text(push_content, encoding="utf-8")
 
-    bat_push = hooks_dir / "pre-push.bat"
-    bat_push.write_text(
-        "@echo off\n"
-        "echo 🛡️  SecureShip: Running Pre-Push Security Audit...\n"
-        "if exist \".git\\secureship-bypass.token\" (\n"
-        "    echo ⚠️  [WARNING] SecureShip: Emergency bypass active. Gate overridden.\n"
-        "    del \".git\\secureship-bypass.token\" >nul 2>&1\n"
-        "    exit /b 0\n"
-        ")\n"
-        "if \"%SECURESHIP_BYPASS%\"==\"1\" exit /b 0\n"
-        "secureship scan . --fail-on high\n"
-        "if %ERRORLEVEL% NEQ 0 (\n"
-        "    echo.\n"
-        "    echo ==============================================================================\n"
-        "    echo ❌ [GIT PUSH BLOCKED] High/Critical vulnerabilities detected!\n"
-        "    echo To override in emergency: secureship bypass --push  OR  git push --no-verify\n"
-        "    echo ==============================================================================\n"
-        "    echo.\n"
-        "    exit /b 1\n"
-        ")\n"
-        "echo ✅ SecureShip: Quality gate approved. Proceeding with push!\n"
-        "exit /b 0\n",
-        encoding="utf-8"
-    )
+        bat_push = hooks_dir / "pre-push.bat"
+        bat_push.write_text(
+            "@echo off\n"
+            "echo 🛡️  SecureShip: Running Pre-Push Security Audit...\n"
+            "if exist \".git\\secureship-bypass.token\" (\n"
+            "    echo ⚠️  [WARNING] SecureShip: Emergency bypass active. Gate overridden.\n"
+            "    del \".git\\secureship-bypass.token\" >nul 2>&1\n"
+            "    exit /b 0\n"
+            ")\n"
+            "if \"%SECURESHIP_BYPASS%\"==\"1\" exit /b 0\n"
+            "secureship scan . --fail-on high\n"
+            "if %ERRORLEVEL% NEQ 0 (\n"
+            "    echo.\n"
+            "    echo ==============================================================================\n"
+            "    echo ❌ [GIT PUSH BLOCKED] High/Critical vulnerabilities detected!\n"
+            "    echo To override in emergency: secureship bypass --push  OR  git push --no-verify\n"
+            "    echo ==============================================================================\n"
+            "    echo.\n"
+            "    exit /b 1\n"
+            ")\n"
+            "echo ✅ SecureShip: Quality gate approved. Proceeding with push!\n"
+            "exit /b 0\n",
+            encoding="utf-8"
+        )
 
-    # Chmod executable on POSIX
-    try:
+        # Chmod executable on POSIX
         for h in [commit_hook, push_hook]:
-            current_stat = os.stat(h)
-            os.chmod(h, current_stat.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-    except Exception:
-        pass
+            try:
+                current_stat = os.stat(h)
+                os.chmod(h, current_stat.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+            except Exception:
+                pass
+    except (OSError, PermissionError) as e:
+        typer.secho(f"Error installing Git hooks in '{repo_path}': {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
 
     typer.secho(f"✅ SecureShip Git security gates successfully installed into: {hooks_dir}", fg=typer.colors.GREEN, bold=True)
     typer.secho("🛡️  Gate 1: pre-commit  (blocks committing secrets/vulnerabilities)", fg=typer.colors.CYAN)
@@ -768,13 +819,17 @@ def bypass(
         typer.secho(f"Error: No .git directory found at '{repo_path}'.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
 
-    token_file = git_dir / "secureship-bypass.token"
-    token_data = {
-        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "reason": reason,
-        "author": os.environ.get("USERNAME") or os.environ.get("USER") or "developer",
-    }
-    token_file.write_text(json.dumps(token_data, indent=2), encoding="utf-8")
+    try:
+        token_file = git_dir / "secureship-bypass.token"
+        token_data = {
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "reason": reason,
+            "author": os.environ.get("USERNAME") or os.environ.get("USER") or "developer",
+        }
+        token_file.write_text(json.dumps(token_data, indent=2), encoding="utf-8")
+    except (OSError, PermissionError) as e:
+        typer.secho(f"Error writing emergency bypass token: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
 
     typer.secho("\n⚠️  [SECURESHIP EMERGENCY BYPASS ARMED]", fg=typer.colors.YELLOW, bold=True)
     typer.secho(f"Reason:  {reason}", fg=typer.colors.WHITE)
@@ -813,6 +868,9 @@ def serve(
     except OSError as e:
         typer.secho(f"\n❌ Error: Unable to bind port {port} ({e}).", fg=typer.colors.RED, bold=True, err=True)
         typer.secho(f"The port might already be in use. Try: secureship serve --port {port + 1}\n", fg=typer.colors.YELLOW)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.secho(f"\n❌ Unexpected error running API server: {e}\n", fg=typer.colors.RED, bold=True, err=True)
         raise typer.Exit(code=1)
 
 

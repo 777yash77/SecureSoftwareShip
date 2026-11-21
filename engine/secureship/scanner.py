@@ -367,7 +367,7 @@ class SecureShipEngine:
                         pass
 
             return findings, lines_count
-        except (PermissionError, FileNotFoundError, OSError):
+        except Exception:
             return findings, 0
 
     def scan_path(self, path: str, min_severity: Optional[Severity] = None) -> ScanResult:

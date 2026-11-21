@@ -290,7 +290,14 @@ def _resolve_scan(scan_id: Optional[str] = None) -> ScanResult:
         return db_scans[0]
 
     # Generate initial scan of demo app if none exists
-    engine = SecureShipEngine("./demo-vulnerable-app")
+    demo_target = Path("./demo-vulnerable-app")
+    if not demo_target.exists():
+        repo_root = Path(__file__).resolve().parent.parent.parent / "demo-vulnerable-app"
+        if repo_root.exists():
+            demo_target = repo_root
+        else:
+            demo_target = Path(".")
+    engine = SecureShipEngine(str(demo_target))
     result = engine.scan()
     scan_history.append(result)
     return result

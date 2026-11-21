@@ -361,12 +361,6 @@ class SecurityAdvisor:
                 )
         return None
 
-
-def explain_finding(finding: Finding, context_code: Optional[str] = None) -> AdvisorResponse:
-    """Deterministic expert fallback function for explaining findings."""
-    return SecurityAdvisor._get_deterministic_advice(finding)
-
-
     @classmethod
     async def _query_ollama(
         cls, finding: Finding, ollama_url: str
