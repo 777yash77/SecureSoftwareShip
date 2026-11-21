@@ -1,0 +1,2550 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "SecureShip",
+          "organization": "SecureShip DevSecOps",
+          "semanticVersion": "1.0.0",
+          "informationUri": "https://github.com/secureship/secureship",
+          "rules": [
+            {
+              "id": "SEC-000",
+              "name": "Tracked Environment File (.env)",
+              "shortDescription": {
+                "text": "Tracked Environment File (.env)"
+              },
+              "fullDescription": {
+                "text": "The environment file '.env' appears to be tracked in version control, potentially leaking secrets."
+              },
+              "help": {
+                "text": "The environment file '.env' appears to be tracked in version control, potentially leaking secrets.\n\nRemediation: Add .env files to .gitignore and provide a template .env.example with dummy values instead.",
+                "markdown": "**Tracked Environment File (.env)**\n\nThe environment file '.env' appears to be tracked in version control, potentially leaking secrets.\n\n### Remediation\nAdd .env files to .gitignore and provide a template .env.example with dummy values instead."
+              },
+              "properties": {
+                "category": "SECRETS",
+                "owasp": "A07:2021-Identification and Authentication Failures",
+                "cwe": "CWE-798",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SEC-002",
+              "name": "Hardcoded GitHub Personal Access Token",
+              "shortDescription": {
+                "text": "Hardcoded GitHub Personal Access Token"
+              },
+              "fullDescription": {
+                "text": "Hardcoded GitHub personal access token detected. This could grant write or admin access to repositories."
+              },
+              "help": {
+                "text": "Hardcoded GitHub personal access token detected. This could grant write or admin access to repositories.\n\nRemediation: Revoke the token immediately and inject it at runtime using GitHub Actions secrets or environment variables.",
+                "markdown": "**Hardcoded GitHub Personal Access Token**\n\nHardcoded GitHub personal access token detected. This could grant write or admin access to repositories.\n\n### Remediation\nRevoke the token immediately and inject it at runtime using GitHub Actions secrets or environment variables."
+              },
+              "properties": {
+                "category": "SECRETS",
+                "owasp": "A07:2021-Identification and Authentication Failures",
+                "cwe": "CWE-798",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SEC-001",
+              "name": "Hardcoded AWS Access Key ID",
+              "shortDescription": {
+                "text": "Hardcoded AWS Access Key ID"
+              },
+              "fullDescription": {
+                "text": "Hardcoded AWS access key detected. An attacker can use this key to access cloud resources."
+              },
+              "help": {
+                "text": "Hardcoded AWS access key detected. An attacker can use this key to access cloud resources.\n\nRemediation: Store the AWS credentials in environment variables (AWS_ACCESS_KEY_ID) or use AWS IAM Roles/AWS Secrets Manager.",
+                "markdown": "**Hardcoded AWS Access Key ID**\n\nHardcoded AWS access key detected. An attacker can use this key to access cloud resources.\n\n### Remediation\nStore the AWS credentials in environment variables (AWS_ACCESS_KEY_ID) or use AWS IAM Roles/AWS Secrets Manager."
+              },
+              "properties": {
+                "category": "SECRETS",
+                "owasp": "A07:2021-Identification and Authentication Failures",
+                "cwe": "CWE-798",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SAST-PY-009",
+              "name": "Flask/Django Debug Mode Enabled",
+              "shortDescription": {
+                "text": "Flask/Django Debug Mode Enabled"
+              },
+              "fullDescription": {
+                "text": "Debug mode discloses detailed stack traces, internal configuration, and interactive debug consoles."
+              },
+              "help": {
+                "text": "Debug mode discloses detailed stack traces, internal configuration, and interactive debug consoles.\n\nRemediation: Set DEBUG = False or load from environment variable (DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true').",
+                "markdown": "**Flask/Django Debug Mode Enabled**\n\nDebug mode discloses detailed stack traces, internal configuration, and interactive debug consoles.\n\n### Remediation\nSet DEBUG = False or load from environment variable (DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true')."
+              },
+              "properties": {
+                "category": "SAST",
+                "owasp": "A05:2021-Security Misconfiguration",
+                "cwe": "CWE-215",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SAST-PY-002",
+              "name": "Command Injection via os.system",
+              "shortDescription": {
+                "text": "Command Injection via os.system"
+              },
+              "fullDescription": {
+                "text": "Direct invocation of os.system allows command injection if arguments are influenced by external input."
+              },
+              "help": {
+                "text": "Direct invocation of os.system allows command injection if arguments are influenced by external input.\n\nRemediation: Use subprocess.run(['cmd', arg], shell=False) with an argument list instead of shell strings.",
+                "markdown": "**Command Injection via os.system**\n\nDirect invocation of os.system allows command injection if arguments are influenced by external input.\n\n### Remediation\nUse subprocess.run(['cmd', arg], shell=False) with an argument list instead of shell strings."
+              },
+              "properties": {
+                "category": "SAST",
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-78",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SAST-PY-003",
+              "name": "Command Injection via subprocess shell=True",
+              "shortDescription": {
+                "text": "Command Injection via subprocess shell=True"
+              },
+              "fullDescription": {
+                "text": "subprocess called with shell=True spawns a shell process vulnerable to argument injection."
+              },
+              "help": {
+                "text": "subprocess called with shell=True spawns a shell process vulnerable to argument injection.\n\nRemediation: Set shell=False and pass arguments as a list of strings: subprocess.run(['cmd', 'arg'])",
+                "markdown": "**Command Injection via subprocess shell=True**\n\nsubprocess called with shell=True spawns a shell process vulnerable to argument injection.\n\n### Remediation\nSet shell=False and pass arguments as a list of strings: subprocess.run(['cmd', 'arg'])"
+              },
+              "properties": {
+                "category": "SAST",
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-78",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SAST-PY-004",
+              "name": "Insecure Deserialization via pickle",
+              "shortDescription": {
+                "text": "Insecure Deserialization via pickle"
+              },
+              "fullDescription": {
+                "text": "Deserializing untrusted data with pickle allows remote code execution via Python object reconstruction."
+              },
+              "help": {
+                "text": "Deserializing untrusted data with pickle allows remote code execution via Python object reconstruction.\n\nRemediation: Use safe serialization formats such as JSON (json.loads) or Protocol Buffers.",
+                "markdown": "**Insecure Deserialization via pickle**\n\nDeserializing untrusted data with pickle allows remote code execution via Python object reconstruction.\n\n### Remediation\nUse safe serialization formats such as JSON (json.loads) or Protocol Buffers."
+              },
+              "properties": {
+                "category": "SAST",
+                "owasp": "A08:2021-Software and Data Integrity Failures",
+                "cwe": "CWE-502",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SAST-PY-006",
+              "name": "Dynamic Code Execution via eval/exec",
+              "shortDescription": {
+                "text": "Dynamic Code Execution via eval/exec"
+              },
+              "fullDescription": {
+                "text": "eval() or exec() executes arbitrary code strings. Highly vulnerable if any argument is user-controlled."
+              },
+              "help": {
+                "text": "eval() or exec() executes arbitrary code strings. Highly vulnerable if any argument is user-controlled.\n\nRemediation: Refactor code to use dictionary lookups, ast.literal_eval, or specific safe parsers.",
+                "markdown": "**Dynamic Code Execution via eval/exec**\n\neval() or exec() executes arbitrary code strings. Highly vulnerable if any argument is user-controlled.\n\n### Remediation\nRefactor code to use dictionary lookups, ast.literal_eval, or specific safe parsers."
+              },
+              "properties": {
+                "category": "SAST",
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-95",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SAST-PY-007",
+              "name": "Use of Broken Cryptographic Hash (MD5/SHA1)",
+              "shortDescription": {
+                "text": "Use of Broken Cryptographic Hash (MD5/SHA1)"
+              },
+              "fullDescription": {
+                "text": "MD5 and SHA-1 have known collision weaknesses and should not be used for security-sensitive operations."
+              },
+              "help": {
+                "text": "MD5 and SHA-1 have known collision weaknesses and should not be used for security-sensitive operations.\n\nRemediation: Upgrade to SHA-256 (hashlib.sha256) or SHA-3/Argon2 for passwords.",
+                "markdown": "**Use of Broken Cryptographic Hash (MD5/SHA1)**\n\nMD5 and SHA-1 have known collision weaknesses and should not be used for security-sensitive operations.\n\n### Remediation\nUpgrade to SHA-256 (hashlib.sha256) or SHA-3/Argon2 for passwords."
+              },
+              "properties": {
+                "category": "SAST",
+                "owasp": "A02:2021-Cryptographic Failures",
+                "cwe": "CWE-327",
+                "problem.severity": "warning"
+              }
+            },
+            {
+              "id": "SAST-PY-008",
+              "name": "Service Bound to All Interfaces (0.0.0.0)",
+              "shortDescription": {
+                "text": "Service Bound to All Interfaces (0.0.0.0)"
+              },
+              "fullDescription": {
+                "text": "Binding to 0.0.0.0 exposes the service to all network interfaces including public and untrusted networks."
+              },
+              "help": {
+                "text": "Binding to 0.0.0.0 exposes the service to all network interfaces including public and untrusted networks.\n\nRemediation: Bind to 127.0.0.1 (localhost) or use a reverse proxy for external routing.",
+                "markdown": "**Service Bound to All Interfaces (0.0.0.0)**\n\nBinding to 0.0.0.0 exposes the service to all network interfaces including public and untrusted networks.\n\n### Remediation\nBind to 127.0.0.1 (localhost) or use a reverse proxy for external routing."
+              },
+              "properties": {
+                "category": "SAST",
+                "owasp": "A05:2021-Security Misconfiguration",
+                "cwe": "CWE-200",
+                "problem.severity": "note"
+              }
+            },
+            {
+              "id": "IAC-COMPOSE-001",
+              "name": "Privileged Container Execution",
+              "shortDescription": {
+                "text": "Privileged Container Execution"
+              },
+              "fullDescription": {
+                "text": "Container configured with privileged: true has full host device and kernel access, allowing container escapes."
+              },
+              "help": {
+                "text": "Container configured with privileged: true has full host device and kernel access, allowing container escapes.\n\nRemediation: Remove privileged: true and grant only explicit Linux capabilities via cap_add if required.",
+                "markdown": "**Privileged Container Execution**\n\nContainer configured with privileged: true has full host device and kernel access, allowing container escapes.\n\n### Remediation\nRemove privileged: true and grant only explicit Linux capabilities via cap_add if required."
+              },
+              "properties": {
+                "category": "IAC",
+                "owasp": "A05:2021-Security Misconfiguration",
+                "cwe": "CWE-250",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "IAC-COMPOSE-002",
+              "name": "Exposed Sensitive Service Port (5432)",
+              "shortDescription": {
+                "text": "Exposed Sensitive Service Port (5432)"
+              },
+              "fullDescription": {
+                "text": "Database / internal service port 5432 is bound to all host interfaces without loopback restriction."
+              },
+              "help": {
+                "text": "Database / internal service port 5432 is bound to all host interfaces without loopback restriction.\n\nRemediation: Bind port to localhost only: '127.0.0.1:5432:5432' or use internal Docker network.",
+                "markdown": "**Exposed Sensitive Service Port (5432)**\n\nDatabase / internal service port 5432 is bound to all host interfaces without loopback restriction.\n\n### Remediation\nBind port to localhost only: '127.0.0.1:5432:5432' or use internal Docker network."
+              },
+              "properties": {
+                "category": "IAC",
+                "owasp": "A05:2021-Security Misconfiguration",
+                "cwe": "CWE-200",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SEC-006",
+              "name": "High-Entropy API Key / Secret Assignment",
+              "shortDescription": {
+                "text": "High-Entropy API Key / Secret Assignment"
+              },
+              "fullDescription": {
+                "text": "High-entropy secret or API key assignment detected via heuristic analysis."
+              },
+              "help": {
+                "text": "High-entropy secret or API key assignment detected via heuristic analysis.\n\nRemediation: Move secrets to an external configuration manager, environment variables, or a KMS.",
+                "markdown": "**High-Entropy API Key / Secret Assignment**\n\nHigh-entropy secret or API key assignment detected via heuristic analysis.\n\n### Remediation\nMove secrets to an external configuration manager, environment variables, or a KMS."
+              },
+              "properties": {
+                "category": "SECRETS",
+                "owasp": "A07:2021-Identification and Authentication Failures",
+                "cwe": "CWE-798",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "IAC-DOCKER-002",
+              "name": "Unpinned Base Image Tag (:latest)",
+              "shortDescription": {
+                "text": "Unpinned Base Image Tag (:latest)"
+              },
+              "fullDescription": {
+                "text": "Base image relies on unpinned or :latest tag, leading to unpredictable, non-reproducible builds."
+              },
+              "help": {
+                "text": "Base image relies on unpinned or :latest tag, leading to unpredictable, non-reproducible builds.\n\nRemediation: Pin base image to an exact immutable version tag or SHA256 digest: FROM python:3.11.9-slim",
+                "markdown": "**Unpinned Base Image Tag (:latest)**\n\nBase image relies on unpinned or :latest tag, leading to unpredictable, non-reproducible builds.\n\n### Remediation\nPin base image to an exact immutable version tag or SHA256 digest: FROM python:3.11.9-slim"
+              },
+              "properties": {
+                "category": "IAC",
+                "owasp": "A05:2021-Security Misconfiguration",
+                "cwe": "CWE-1188",
+                "problem.severity": "warning"
+              }
+            },
+            {
+              "id": "IAC-DOCKER-003",
+              "name": "Sensitive Credential in Dockerfile ENV/ARG",
+              "shortDescription": {
+                "text": "Sensitive Credential in Dockerfile ENV/ARG"
+              },
+              "fullDescription": {
+                "text": "Sensitive environment variable or argument hardcoded in Dockerfile. Value persists in image metadata layers."
+              },
+              "help": {
+                "text": "Sensitive environment variable or argument hardcoded in Dockerfile. Value persists in image metadata layers.\n\nRemediation: Use BuildKit secrets mount (RUN --mount=type=secret) or runtime environment injection.",
+                "markdown": "**Sensitive Credential in Dockerfile ENV/ARG**\n\nSensitive environment variable or argument hardcoded in Dockerfile. Value persists in image metadata layers.\n\n### Remediation\nUse BuildKit secrets mount (RUN --mount=type=secret) or runtime environment injection."
+              },
+              "properties": {
+                "category": "IAC",
+                "owasp": "A07:2021-Identification and Authentication Failures",
+                "cwe": "CWE-798",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "IAC-DOCKER-001",
+              "name": "Container Running as Root (Missing USER Instruction)",
+              "shortDescription": {
+                "text": "Container Running as Root (Missing USER Instruction)"
+              },
+              "fullDescription": {
+                "text": "Dockerfile has no USER directive; container processes will run with root privileges inside the container."
+              },
+              "help": {
+                "text": "Dockerfile has no USER directive; container processes will run with root privileges inside the container.\n\nRemediation: Create a dedicated unprivileged user and switch to it before ENTRYPOINT: RUN adduser -D appuser && USER appuser",
+                "markdown": "**Container Running as Root (Missing USER Instruction)**\n\nDockerfile has no USER directive; container processes will run with root privileges inside the container.\n\n### Remediation\nCreate a dedicated unprivileged user and switch to it before ENTRYPOINT: RUN adduser -D appuser && USER appuser"
+              },
+              "properties": {
+                "category": "IAC",
+                "owasp": "A05:2021-Security Misconfiguration",
+                "cwe": "CWE-250",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "IAC-K8S-001",
+              "name": "Missing Pod Resource Limits (CPU/Memory)",
+              "shortDescription": {
+                "text": "Missing Pod Resource Limits (CPU/Memory)"
+              },
+              "fullDescription": {
+                "text": "Kubernetes containers without resource limits can cause Denial of Service (DoS) and starve neighboring workloads."
+              },
+              "help": {
+                "text": "Kubernetes containers without resource limits can cause Denial of Service (DoS) and starve neighboring workloads.\n\nRemediation: Define resources.limits.cpu and resources.limits.memory for each container.",
+                "markdown": "**Missing Pod Resource Limits (CPU/Memory)**\n\nKubernetes containers without resource limits can cause Denial of Service (DoS) and starve neighboring workloads.\n\n### Remediation\nDefine resources.limits.cpu and resources.limits.memory for each container."
+              },
+              "properties": {
+                "category": "IAC",
+                "owasp": "A05:2021-Security Misconfiguration",
+                "cwe": "CWE-400",
+                "problem.severity": "warning"
+              }
+            },
+            {
+              "id": "IAC-K8S-002",
+              "name": "Privileged Pod Security Context",
+              "shortDescription": {
+                "text": "Privileged Pod Security Context"
+              },
+              "fullDescription": {
+                "text": "Pod securityContext has privileged: true, allowing pod root to execute host operations."
+              },
+              "help": {
+                "text": "Pod securityContext has privileged: true, allowing pod root to execute host operations.\n\nRemediation: Set privileged: false and drop unnecessary capabilities.",
+                "markdown": "**Privileged Pod Security Context**\n\nPod securityContext has privileged: true, allowing pod root to execute host operations.\n\n### Remediation\nSet privileged: false and drop unnecessary capabilities."
+              },
+              "properties": {
+                "category": "IAC",
+                "owasp": "A05:2021-Security Misconfiguration",
+                "cwe": "CWE-250",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SCA-CVE2024290",
+              "name": "Open Redirect via malformed URLs in Express",
+              "shortDescription": {
+                "text": "Open Redirect via malformed URLs in Express"
+              },
+              "fullDescription": {
+                "text": "Express before 4.19.2 allows open redirection via mishandling user-supplied URL strings."
+              },
+              "help": {
+                "text": "Express before 4.19.2 allows open redirection via mishandling user-supplied URL strings.\n\nRemediation: Upgrade express to version 4.19.2 or higher.",
+                "markdown": "**Open Redirect via malformed URLs in Express**\n\nExpress before 4.19.2 allows open redirection via mishandling user-supplied URL strings.\n\n### Remediation\nUpgrade express to version 4.19.2 or higher."
+              },
+              "properties": {
+                "category": "SCA",
+                "owasp": "A06:2021-Vulnerable and Outdated Components",
+                "cwe": "CWE-601",
+                "problem.severity": "warning"
+              }
+            },
+            {
+              "id": "SCA-CVE2020820",
+              "name": "Prototype Pollution in lodash",
+              "shortDescription": {
+                "text": "Prototype Pollution in lodash"
+              },
+              "fullDescription": {
+                "text": "lodash before 4.17.21 is vulnerable to prototype pollution in zipObjectDeep."
+              },
+              "help": {
+                "text": "lodash before 4.17.21 is vulnerable to prototype pollution in zipObjectDeep.\n\nRemediation: Upgrade lodash to version 4.17.21 or higher.",
+                "markdown": "**Prototype Pollution in lodash**\n\nlodash before 4.17.21 is vulnerable to prototype pollution in zipObjectDeep.\n\n### Remediation\nUpgrade lodash to version 4.17.21 or higher."
+              },
+              "properties": {
+                "category": "SCA",
+                "owasp": "A06:2021-Vulnerable and Outdated Components",
+                "cwe": "CWE-1321",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SCA-CVE2020281",
+              "name": "Server-Side Request Forgery (SSRF) in axios",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery (SSRF) in axios"
+              },
+              "fullDescription": {
+                "text": "Axios up to 0.21.1 is vulnerable to SSRF via follow-redirects proxy header bypass."
+              },
+              "help": {
+                "text": "Axios up to 0.21.1 is vulnerable to SSRF via follow-redirects proxy header bypass.\n\nRemediation: Upgrade axios to version 0.21.2 or higher.",
+                "markdown": "**Server-Side Request Forgery (SSRF) in axios**\n\nAxios up to 0.21.1 is vulnerable to SSRF via follow-redirects proxy header bypass.\n\n### Remediation\nUpgrade axios to version 0.21.2 or higher."
+              },
+              "properties": {
+                "category": "SCA",
+                "owasp": "A06:2021-Vulnerable and Outdated Components",
+                "cwe": "CWE-918",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SCA-CVE2022235",
+              "name": "Remote Code Execution in jsonwebtoken",
+              "shortDescription": {
+                "text": "Remote Code Execution in jsonwebtoken"
+              },
+              "fullDescription": {
+                "text": "Insecure key object validation allows arbitrary file write / code execution."
+              },
+              "help": {
+                "text": "Insecure key object validation allows arbitrary file write / code execution.\n\nRemediation: Upgrade jsonwebtoken to version 9.0.0 or higher.",
+                "markdown": "**Remote Code Execution in jsonwebtoken**\n\nInsecure key object validation allows arbitrary file write / code execution.\n\n### Remediation\nUpgrade jsonwebtoken to version 9.0.0 or higher."
+              },
+              "properties": {
+                "category": "SCA",
+                "owasp": "A06:2021-Vulnerable and Outdated Components",
+                "cwe": "CWE-502",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SCA-CVE2021442",
+              "name": "Log4Shell JNDI Remote Code Execution in Log4j",
+              "shortDescription": {
+                "text": "Log4Shell JNDI Remote Code Execution in Log4j"
+              },
+              "fullDescription": {
+                "text": "Apache Log4j2 JNDI features used in configuration, log messages, and parameters do not protect against attacker-controlled LDAP."
+              },
+              "help": {
+                "text": "Apache Log4j2 JNDI features used in configuration, log messages, and parameters do not protect against attacker-controlled LDAP.\n\nRemediation: Upgrade org.apache.logging.log4j:log4j-core to version 2.17.1 or higher.",
+                "markdown": "**Log4Shell JNDI Remote Code Execution in Log4j**\n\nApache Log4j2 JNDI features used in configuration, log messages, and parameters do not protect against attacker-controlled LDAP.\n\n### Remediation\nUpgrade org.apache.logging.log4j:log4j-core to version 2.17.1 or higher."
+              },
+              "properties": {
+                "category": "SCA",
+                "owasp": "A06:2021-Vulnerable and Outdated Components",
+                "cwe": "CWE-502",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SCA-CVE2022229",
+              "name": "Spring4Shell Remote Code Execution via Data Binding",
+              "shortDescription": {
+                "text": "Spring4Shell Remote Code Execution via Data Binding"
+              },
+              "fullDescription": {
+                "text": "Spring Framework RCE via data binding on JDK 9+ when deployed as a WAR on Tomcat."
+              },
+              "help": {
+                "text": "Spring Framework RCE via data binding on JDK 9+ when deployed as a WAR on Tomcat.\n\nRemediation: Upgrade org.springframework:spring-core to version 5.3.18 or higher.",
+                "markdown": "**Spring4Shell Remote Code Execution via Data Binding**\n\nSpring Framework RCE via data binding on JDK 9+ when deployed as a WAR on Tomcat.\n\n### Remediation\nUpgrade org.springframework:spring-core to version 5.3.18 or higher."
+              },
+              "properties": {
+                "category": "SCA",
+                "owasp": "A06:2021-Vulnerable and Outdated Components",
+                "cwe": "CWE-94",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SCA-CVE2023326",
+              "name": "Unintended Leak of Proxy-Authorization in Requests",
+              "shortDescription": {
+                "text": "Unintended Leak of Proxy-Authorization in Requests"
+              },
+              "fullDescription": {
+                "text": "Requests leaks Proxy-Authorization headers to destination servers when following redirects."
+              },
+              "help": {
+                "text": "Requests leaks Proxy-Authorization headers to destination servers when following redirects.\n\nRemediation: Upgrade requests to version 2.31.0 or higher.",
+                "markdown": "**Unintended Leak of Proxy-Authorization in Requests**\n\nRequests leaks Proxy-Authorization headers to destination servers when following redirects.\n\n### Remediation\nUpgrade requests to version 2.31.0 or higher."
+              },
+              "properties": {
+                "category": "SCA",
+                "owasp": "A06:2021-Vulnerable and Outdated Components",
+                "cwe": "CWE-200",
+                "problem.severity": "warning"
+              }
+            },
+            {
+              "id": "SCA-CVE2023438",
+              "name": "Cookie Header Leak in urllib3 across Cross-Origin Redirects",
+              "shortDescription": {
+                "text": "Cookie Header Leak in urllib3 across Cross-Origin Redirects"
+              },
+              "fullDescription": {
+                "text": "urllib3 does not remove HTTP Cookie headers during cross-origin redirect chains."
+              },
+              "help": {
+                "text": "urllib3 does not remove HTTP Cookie headers during cross-origin redirect chains.\n\nRemediation: Upgrade urllib3 to version 1.26.18 or higher.",
+                "markdown": "**Cookie Header Leak in urllib3 across Cross-Origin Redirects**\n\nurllib3 does not remove HTTP Cookie headers during cross-origin redirect chains.\n\n### Remediation\nUpgrade urllib3 to version 1.26.18 or higher."
+              },
+              "properties": {
+                "category": "SCA",
+                "owasp": "A06:2021-Vulnerable and Outdated Components",
+                "cwe": "CWE-200",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SCA-CVE2023308",
+              "name": "Session Cookie Disclosure in Flask",
+              "shortDescription": {
+                "text": "Session Cookie Disclosure in Flask"
+              },
+              "fullDescription": {
+                "text": "Flask session cookies lack Vary: Cookie header caching protections in some reverse-proxy setups."
+              },
+              "help": {
+                "text": "Flask session cookies lack Vary: Cookie header caching protections in some reverse-proxy setups.\n\nRemediation: Upgrade flask to version 2.2.5 or higher.",
+                "markdown": "**Session Cookie Disclosure in Flask**\n\nFlask session cookies lack Vary: Cookie header caching protections in some reverse-proxy setups.\n\n### Remediation\nUpgrade flask to version 2.2.5 or higher."
+              },
+              "properties": {
+                "category": "SCA",
+                "owasp": "A06:2021-Vulnerable and Outdated Components",
+                "cwe": "CWE-384",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SAST-JS-005",
+              "name": "Disabled TLS/SSL Certificate Verification",
+              "shortDescription": {
+                "text": "Disabled TLS/SSL Certificate Verification"
+              },
+              "fullDescription": {
+                "text": "Disabling TLS certificate validation (rejectUnauthorized: false) makes network traffic susceptible to Man-in-the-Middle (MITM) attacks."
+              },
+              "help": {
+                "text": "Disabling TLS certificate validation (rejectUnauthorized: false) makes network traffic susceptible to Man-in-the-Middle (MITM) attacks.\n\nRemediation: Remove rejectUnauthorized: false and install proper root/intermediate certificates.",
+                "markdown": "**Disabled TLS/SSL Certificate Verification**\n\nDisabling TLS certificate validation (rejectUnauthorized: false) makes network traffic susceptible to Man-in-the-Middle (MITM) attacks.\n\n### Remediation\nRemove rejectUnauthorized: false and install proper root/intermediate certificates."
+              },
+              "properties": {
+                "category": "SAST",
+                "owasp": "A02:2021-Cryptographic Failures",
+                "cwe": "CWE-295",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SAST-JS-004",
+              "name": "Command Injection via child_process.exec",
+              "shortDescription": {
+                "text": "Command Injection via child_process.exec"
+              },
+              "fullDescription": {
+                "text": "child_process.exec executes arbitrary commands in a shell environment, allowing command injection."
+              },
+              "help": {
+                "text": "child_process.exec executes arbitrary commands in a shell environment, allowing command injection.\n\nRemediation: Use child_process.execFile() or spawn() without a shell, passing arguments in an array.",
+                "markdown": "**Command Injection via child_process.exec**\n\nchild_process.exec executes arbitrary commands in a shell environment, allowing command injection.\n\n### Remediation\nUse child_process.execFile() or spawn() without a shell, passing arguments in an array."
+              },
+              "properties": {
+                "category": "SAST",
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-78",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SAST-JS-001",
+              "name": "Arbitrary Code Execution via eval()",
+              "shortDescription": {
+                "text": "Arbitrary Code Execution via eval()"
+              },
+              "fullDescription": {
+                "text": "Use of eval() in JavaScript executes strings as code, exposing the application to injection attacks."
+              },
+              "help": {
+                "text": "Use of eval() in JavaScript executes strings as code, exposing the application to injection attacks.\n\nRemediation: Avoid eval(). Use JSON.parse() for data serialization or safe parser alternatives.",
+                "markdown": "**Arbitrary Code Execution via eval()**\n\nUse of eval() in JavaScript executes strings as code, exposing the application to injection attacks.\n\n### Remediation\nAvoid eval(). Use JSON.parse() for data serialization or safe parser alternatives."
+              },
+              "properties": {
+                "category": "SAST",
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-95",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SAST-JS-003",
+              "name": "SQL Injection via String Concatenation",
+              "shortDescription": {
+                "text": "SQL Injection via String Concatenation"
+              },
+              "fullDescription": {
+                "text": "SQL query created by concatenating variables or template literals inside query()."
+              },
+              "help": {
+                "text": "SQL query created by concatenating variables or template literals inside query().\n\nRemediation: Use parameterized queries: db.query('SELECT * FROM users WHERE id = $1', [userId])",
+                "markdown": "**SQL Injection via String Concatenation**\n\nSQL query created by concatenating variables or template literals inside query().\n\n### Remediation\nUse parameterized queries: db.query('SELECT * FROM users WHERE id = $1', [userId])"
+              },
+              "properties": {
+                "category": "SAST",
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-89",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "SAST-JS-002",
+              "name": "Cross-Site Scripting (XSS) via innerHTML",
+              "shortDescription": {
+                "text": "Cross-Site Scripting (XSS) via innerHTML"
+              },
+              "fullDescription": {
+                "text": "Unsanitized assignment to innerHTML or dangerouslySetInnerHTML can lead to Cross-Site Scripting (XSS)."
+              },
+              "help": {
+                "text": "Unsanitized assignment to innerHTML or dangerouslySetInnerHTML can lead to Cross-Site Scripting (XSS).\n\nRemediation: Use textContent, innerText, or sanitize HTML input with DOMPurify.",
+                "markdown": "**Cross-Site Scripting (XSS) via innerHTML**\n\nUnsanitized assignment to innerHTML or dangerouslySetInnerHTML can lead to Cross-Site Scripting (XSS).\n\n### Remediation\nUse textContent, innerText, or sanitize HTML input with DOMPurify."
+              },
+              "properties": {
+                "category": "SAST",
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-79",
+                "problem.severity": "error"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SEC-000",
+          "level": "error",
+          "message": {
+            "text": "Tracked Environment File (.env): The environment file '.env' appears to be tracked in version control, potentially leaking secrets. (Remediation: Add .env files to .gitignore and provide a template .env.example with dummy values instead.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".env",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "# File: .env"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-798",
+            "owasp": "A07:2021-Identification and Authentication Failures",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: Add .env to .gitignore and remove from repository history"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": ".env"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 1,
+                        "endLine": 1
+                      },
+                      "insertedContent": {
+                        "text": "Add .env to .gitignore and remove from repository history"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SEC-002",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded GitHub Personal Access Token: Hardcoded GitHub personal access token detected. This could grant write or admin access to repositories. (Remediation: Revoke the token immediately and inject it at runtime using GitHub Actions secrets or environment variables.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".env",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "endLine": 3,
+                  "snippet": {
+                    "text": "GITHUB_TOKEN=ghp_ABC1234567890abcdefghijklmnopqrstuvwxyz"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-798",
+            "owasp": "A07:2021-Identification and Authentication Failures",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: os.environ.get('GITHUB_TOKEN')"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": ".env"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 3,
+                        "endLine": 3
+                      },
+                      "insertedContent": {
+                        "text": "os.environ.get('GITHUB_TOKEN')"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SEC-001",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded AWS Access Key ID: Hardcoded AWS access key detected. An attacker can use this key to access cloud resources. (Remediation: Store the AWS credentials in environment variables (AWS_ACCESS_KEY_ID) or use AWS IAM Roles/AWS Secrets Manager.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "endLine": 13,
+                  "snippet": {
+                    "text": "AWS_ACCESS_KEY_ID = \"AKIA1111222233334444\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-798",
+            "owasp": "A07:2021-Identification and Authentication Failures",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: os.environ.get('AWS_ACCESS_KEY_ID')"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "app.py"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 13,
+                        "endLine": 13
+                      },
+                      "insertedContent": {
+                        "text": "os.environ.get('AWS_ACCESS_KEY_ID')"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-PY-009",
+          "level": "error",
+          "message": {
+            "text": "Flask/Django Debug Mode Enabled: Debug mode discloses detailed stack traces, internal configuration, and interactive debug consoles. (Remediation: Set DEBUG = False or load from environment variable (DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true').)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 10,
+                  "snippet": {
+                    "text": "DEBUG = True"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-215",
+            "owasp": "A05:2021-Security Misconfiguration",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: DEBUG = False"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "app.py"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 10,
+                        "endLine": 10
+                      },
+                      "insertedContent": {
+                        "text": "DEBUG = False"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-PY-002",
+          "level": "error",
+          "message": {
+            "text": "Command Injection via os.system: Direct invocation of os.system allows command injection if arguments are influenced by external input. (Remediation: Use subprocess.run(['cmd', arg], shell=False) with an argument list instead of shell strings.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "endLine": 31,
+                  "snippet": {
+                    "text": "os.system(\"ping -c 1 \" + host)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-78",
+            "owasp": "A03:2021-Injection",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: subprocess.run(['command', arg], check=True)"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "app.py"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 31,
+                        "endLine": 31
+                      },
+                      "insertedContent": {
+                        "text": "subprocess.run(['command', arg], check=True)"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-PY-003",
+          "level": "error",
+          "message": {
+            "text": "Command Injection via subprocess shell=True: subprocess called with shell=True spawns a shell process vulnerable to argument injection. (Remediation: Set shell=False and pass arguments as a list of strings: subprocess.run(['cmd', 'arg']))"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 34,
+                  "endLine": 34,
+                  "snippet": {
+                    "text": "subprocess.Popen(f\"nslookup {host}\", shell=True)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-78",
+            "owasp": "A03:2021-Injection",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: shell=False"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "app.py"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 34,
+                        "endLine": 34
+                      },
+                      "insertedContent": {
+                        "text": "shell=False"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-PY-004",
+          "level": "error",
+          "message": {
+            "text": "Insecure Deserialization via pickle: Deserializing untrusted data with pickle allows remote code execution via Python object reconstruction. (Remediation: Use safe serialization formats such as JSON (json.loads) or Protocol Buffers.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 42,
+                  "endLine": 42,
+                  "snippet": {
+                    "text": "user_obj = pickle.loads(raw_payload)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-502",
+            "owasp": "A08:2021-Software and Data Integrity Failures",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: json.loads(data)"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "app.py"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 42,
+                        "endLine": 42
+                      },
+                      "insertedContent": {
+                        "text": "json.loads(data)"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-PY-006",
+          "level": "error",
+          "message": {
+            "text": "Dynamic Code Execution via eval/exec: eval() or exec() executes arbitrary code strings. Highly vulnerable if any argument is user-controlled. (Remediation: Refactor code to use dictionary lookups, ast.literal_eval, or specific safe parsers.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 50,
+                  "endLine": 50,
+                  "snippet": {
+                    "text": "res = eval(expression)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-95",
+            "owasp": "A03:2021-Injection",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: ast.literal_eval(data)"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "app.py"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 50,
+                        "endLine": 50
+                      },
+                      "insertedContent": {
+                        "text": "ast.literal_eval(data)"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-PY-007",
+          "level": "warning",
+          "message": {
+            "text": "Use of Broken Cryptographic Hash (MD5/SHA1): MD5 and SHA-1 have known collision weaknesses and should not be used for security-sensitive operations. (Remediation: Upgrade to SHA-256 (hashlib.sha256) or SHA-3/Argon2 for passwords.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 58,
+                  "endLine": 58,
+                  "snippet": {
+                    "text": "hashed = hashlib.md5(pwd.encode()).hexdigest()"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-327",
+            "owasp": "A02:2021-Cryptographic Failures",
+            "severity": "MEDIUM"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: hashlib.sha256"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "app.py"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 58,
+                        "endLine": 58
+                      },
+                      "insertedContent": {
+                        "text": "hashlib.sha256"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-PY-008",
+          "level": "note",
+          "message": {
+            "text": "Service Bound to All Interfaces (0.0.0.0): Binding to 0.0.0.0 exposes the service to all network interfaces including public and untrusted networks. (Remediation: Bind to 127.0.0.1 (localhost) or use a reverse proxy for external routing.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 64,
+                  "endLine": 64,
+                  "snippet": {
+                    "text": "app.run(host=\"0.0.0.0\", port=5000, debug=True)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-200",
+            "owasp": "A05:2021-Security Misconfiguration",
+            "severity": "LOW"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: host='127.0.0.1'"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "app.py"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 64,
+                        "endLine": 64
+                      },
+                      "insertedContent": {
+                        "text": "host='127.0.0.1'"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "IAC-COMPOSE-001",
+          "level": "error",
+          "message": {
+            "text": "Privileged Container Execution: Container configured with privileged: true has full host device and kernel access, allowing container escapes. (Remediation: Remove privileged: true and grant only explicit Linux capabilities via cap_add if required.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker-compose.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7,
+                  "endLine": 7,
+                  "snippet": {
+                    "text": "privileged: true"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-250",
+            "owasp": "A05:2021-Security Misconfiguration",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: privileged: false"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "docker-compose.yml"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 7,
+                        "endLine": 7
+                      },
+                      "insertedContent": {
+                        "text": "privileged: false"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "IAC-COMPOSE-002",
+          "level": "error",
+          "message": {
+            "text": "Exposed Sensitive Service Port (5432): Database / internal service port 5432 is bound to all host interfaces without loopback restriction. (Remediation: Bind port to localhost only: '127.0.0.1:5432:5432' or use internal Docker network.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker-compose.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 10,
+                  "snippet": {
+                    "text": "- \"5432:5432\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-200",
+            "owasp": "A05:2021-Security Misconfiguration",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: '127.0.0.1:5432:5432'"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "docker-compose.yml"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 10,
+                        "endLine": 10
+                      },
+                      "insertedContent": {
+                        "text": "'127.0.0.1:5432:5432'"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SEC-006",
+          "level": "error",
+          "message": {
+            "text": "High-Entropy API Key / Secret Assignment: High-entropy secret or API key assignment detected via heuristic analysis. (Remediation: Move secrets to an external configuration manager, environment variables, or a KMS.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Dockerfile",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7,
+                  "endLine": 7,
+                  "snippet": {
+                    "text": "ENV API_SECRET_TOKEN=\"sk_live_999988887777666655554444\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-798",
+            "owasp": "A07:2021-Identification and Authentication Failures",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: os.environ.get('API_KEY')"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "Dockerfile"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 7,
+                        "endLine": 7
+                      },
+                      "insertedContent": {
+                        "text": "os.environ.get('API_KEY')"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "IAC-DOCKER-002",
+          "level": "warning",
+          "message": {
+            "text": "Unpinned Base Image Tag (:latest): Base image relies on unpinned or :latest tag, leading to unpredictable, non-reproducible builds. (Remediation: Pin base image to an exact immutable version tag or SHA256 digest: FROM python:3.11.9-slim)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Dockerfile",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2,
+                  "endLine": 2,
+                  "snippet": {
+                    "text": "FROM python:latest"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-1188",
+            "owasp": "A05:2021-Security Misconfiguration",
+            "severity": "MEDIUM"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: FROM python:3.11-slim"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "Dockerfile"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 2,
+                        "endLine": 2
+                      },
+                      "insertedContent": {
+                        "text": "FROM python:3.11-slim"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "IAC-DOCKER-003",
+          "level": "error",
+          "message": {
+            "text": "Sensitive Credential in Dockerfile ENV/ARG: Sensitive environment variable or argument hardcoded in Dockerfile. Value persists in image metadata layers. (Remediation: Use BuildKit secrets mount (RUN --mount=type=secret) or runtime environment injection.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Dockerfile",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7,
+                  "endLine": 7,
+                  "snippet": {
+                    "text": "ENV API_SECRET_TOKEN=\"sk_live_999988887777666655554444\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-798",
+            "owasp": "A07:2021-Identification and Authentication Failures",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: Inject credentials dynamically at container runtime."
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "Dockerfile"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 7,
+                        "endLine": 7
+                      },
+                      "insertedContent": {
+                        "text": "Inject credentials dynamically at container runtime."
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "IAC-DOCKER-001",
+          "level": "error",
+          "message": {
+            "text": "Container Running as Root (Missing USER Instruction): Dockerfile has no USER directive; container processes will run with root privileges inside the container. (Remediation: Create a dedicated unprivileged user and switch to it before ENTRYPOINT: RUN adduser -D appuser && USER appuser)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Dockerfile",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2,
+                  "endLine": 16,
+                  "snippet": {
+                    "text": "USER nonroot (missing)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-250",
+            "owasp": "A05:2021-Security Misconfiguration",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: USER appuser"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "Dockerfile"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 2,
+                        "endLine": 16
+                      },
+                      "insertedContent": {
+                        "text": "USER appuser"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "IAC-K8S-001",
+          "level": "warning",
+          "message": {
+            "text": "Missing Pod Resource Limits (CPU/Memory): Kubernetes containers without resource limits can cause Denial of Service (DoS) and starve neighboring workloads. (Remediation: Define resources.limits.cpu and resources.limits.memory for each container.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "k8s-pod.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 6,
+                  "snippet": {
+                    "text": "containers: (no resources.limits defined)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-400",
+            "owasp": "A05:2021-Security Misconfiguration",
+            "severity": "MEDIUM"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: resources:\n  limits:\n    cpu: '500m'\n    memory: '512Mi'"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "k8s-pod.yaml"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 6,
+                        "endLine": 6
+                      },
+                      "insertedContent": {
+                        "text": "resources:\n  limits:\n    cpu: '500m'\n    memory: '512Mi'"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "IAC-K8S-002",
+          "level": "error",
+          "message": {
+            "text": "Privileged Pod Security Context: Pod securityContext has privileged: true, allowing pod root to execute host operations. (Remediation: Set privileged: false and drop unnecessary capabilities.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "k8s-pod.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "endLine": 12,
+                  "snippet": {
+                    "text": "privileged: true"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-250",
+            "owasp": "A05:2021-Security Misconfiguration",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: privileged: false"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "k8s-pod.yaml"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 12,
+                        "endLine": 12
+                      },
+                      "insertedContent": {
+                        "text": "privileged: false"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SCA-CVE2024290",
+          "level": "warning",
+          "message": {
+            "text": "Open Redirect via malformed URLs in Express: Express before 4.19.2 allows open redirection via mishandling user-supplied URL strings. (Remediation: Upgrade express to version 4.19.2 or higher.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 10,
+                  "snippet": {
+                    "text": "\"express\": \"4.19.1\","
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-601",
+            "owasp": "A06:2021-Vulnerable and Outdated Components",
+            "severity": "MEDIUM"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: express@4.19.2"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "package.json"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 10,
+                        "endLine": 10
+                      },
+                      "insertedContent": {
+                        "text": "express@4.19.2"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SCA-CVE2020820",
+          "level": "error",
+          "message": {
+            "text": "Prototype Pollution in lodash: lodash before 4.17.21 is vulnerable to prototype pollution in zipObjectDeep. (Remediation: Upgrade lodash to version 4.17.21 or higher.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 11,
+                  "snippet": {
+                    "text": "\"lodash\": \"4.17.15\","
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-1321",
+            "owasp": "A06:2021-Vulnerable and Outdated Components",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: lodash@4.17.21"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "package.json"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 11,
+                        "endLine": 11
+                      },
+                      "insertedContent": {
+                        "text": "lodash@4.17.21"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SCA-CVE2020281",
+          "level": "error",
+          "message": {
+            "text": "Server-Side Request Forgery (SSRF) in axios: Axios up to 0.21.1 is vulnerable to SSRF via follow-redirects proxy header bypass. (Remediation: Upgrade axios to version 0.21.2 or higher.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "endLine": 12,
+                  "snippet": {
+                    "text": "\"axios\": \"0.21.1\","
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-918",
+            "owasp": "A06:2021-Vulnerable and Outdated Components",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: axios@0.21.2"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "package.json"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 12,
+                        "endLine": 12
+                      },
+                      "insertedContent": {
+                        "text": "axios@0.21.2"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SCA-CVE2022235",
+          "level": "error",
+          "message": {
+            "text": "Remote Code Execution in jsonwebtoken: Insecure key object validation allows arbitrary file write / code execution. (Remediation: Upgrade jsonwebtoken to version 9.0.0 or higher.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "endLine": 13,
+                  "snippet": {
+                    "text": "\"jsonwebtoken\": \"8.5.1\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-502",
+            "owasp": "A06:2021-Vulnerable and Outdated Components",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: jsonwebtoken@9.0.0"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "package.json"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 13,
+                        "endLine": 13
+                      },
+                      "insertedContent": {
+                        "text": "jsonwebtoken@9.0.0"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SCA-CVE2021442",
+          "level": "error",
+          "message": {
+            "text": "Log4Shell JNDI Remote Code Execution in Log4j: Apache Log4j2 JNDI features used in configuration, log messages, and parameters do not protect against attacker-controlled LDAP. (Remediation: Upgrade org.apache.logging.log4j:log4j-core to version 2.17.1 or higher.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "pom.xml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "endLine": 13,
+                  "snippet": {
+                    "text": "<artifactId>log4j-core</artifactId>"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-502",
+            "owasp": "A06:2021-Vulnerable and Outdated Components",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: org.apache.logging.log4j:log4j-core@2.17.1"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "pom.xml"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 13,
+                        "endLine": 13
+                      },
+                      "insertedContent": {
+                        "text": "org.apache.logging.log4j:log4j-core@2.17.1"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SCA-CVE2022229",
+          "level": "error",
+          "message": {
+            "text": "Spring4Shell Remote Code Execution via Data Binding: Spring Framework RCE via data binding on JDK 9+ when deployed as a WAR on Tomcat. (Remediation: Upgrade org.springframework:spring-core to version 5.3.18 or higher.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "pom.xml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "endLine": 19,
+                  "snippet": {
+                    "text": "<artifactId>spring-core</artifactId>"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-94",
+            "owasp": "A06:2021-Vulnerable and Outdated Components",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: org.springframework:spring-core@5.3.18"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "pom.xml"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 19,
+                        "endLine": 19
+                      },
+                      "insertedContent": {
+                        "text": "org.springframework:spring-core@5.3.18"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SCA-CVE2023326",
+          "level": "warning",
+          "message": {
+            "text": "Unintended Leak of Proxy-Authorization in Requests: Requests leaks Proxy-Authorization headers to destination servers when following redirects. (Remediation: Upgrade requests to version 2.31.0 or higher.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "requirements.txt",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2,
+                  "endLine": 2,
+                  "snippet": {
+                    "text": "requests==2.25.0"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-200",
+            "owasp": "A06:2021-Vulnerable and Outdated Components",
+            "severity": "MEDIUM"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: requests@2.31.0"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "requirements.txt"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 2,
+                        "endLine": 2
+                      },
+                      "insertedContent": {
+                        "text": "requests@2.31.0"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SCA-CVE2023438",
+          "level": "error",
+          "message": {
+            "text": "Cookie Header Leak in urllib3 across Cross-Origin Redirects: urllib3 does not remove HTTP Cookie headers during cross-origin redirect chains. (Remediation: Upgrade urllib3 to version 1.26.18 or higher.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "requirements.txt",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "endLine": 3,
+                  "snippet": {
+                    "text": "urllib3==1.26.4"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-200",
+            "owasp": "A06:2021-Vulnerable and Outdated Components",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: urllib3@1.26.18"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "requirements.txt"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 3,
+                        "endLine": 3
+                      },
+                      "insertedContent": {
+                        "text": "urllib3@1.26.18"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SCA-CVE2023308",
+          "level": "error",
+          "message": {
+            "text": "Session Cookie Disclosure in Flask: Flask session cookies lack Vary: Cookie header caching protections in some reverse-proxy setups. (Remediation: Upgrade flask to version 2.2.5 or higher.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "requirements.txt",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4,
+                  "endLine": 4,
+                  "snippet": {
+                    "text": "flask==1.1.2"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-384",
+            "owasp": "A06:2021-Vulnerable and Outdated Components",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: flask@2.2.5"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "requirements.txt"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 4,
+                        "endLine": 4
+                      },
+                      "insertedContent": {
+                        "text": "flask@2.2.5"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SEC-006",
+          "level": "error",
+          "message": {
+            "text": "High-Entropy API Key / Secret Assignment: High-entropy secret or API key assignment detected via heuristic analysis. (Remediation: Move secrets to an external configuration manager, environment variables, or a KMS.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 10,
+                  "snippet": {
+                    "text": "const JWT_SECRET = \"super-secret-hardcoded-signing-token-xyz123\";"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-798",
+            "owasp": "A07:2021-Identification and Authentication Failures",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: process.env.API_KEY"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "server.js"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 10,
+                        "endLine": 10
+                      },
+                      "insertedContent": {
+                        "text": "process.env.API_KEY"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-JS-005",
+          "level": "error",
+          "message": {
+            "text": "Disabled TLS/SSL Certificate Verification: Disabling TLS certificate validation (rejectUnauthorized: false) makes network traffic susceptible to Man-in-the-Middle (MITM) attacks. (Remediation: Remove rejectUnauthorized: false and install proper root/intermediate certificates.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "endLine": 16,
+                  "snippet": {
+                    "text": "// Vulnerability 11: Disabled TLS/SSL Certificate Verification (rejectUnauthorized: false)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-295",
+            "owasp": "A02:2021-Cryptographic Failures",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: rejectUnauthorized: true"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "server.js"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 16,
+                        "endLine": 16
+                      },
+                      "insertedContent": {
+                        "text": "rejectUnauthorized: true"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-JS-005",
+          "level": "error",
+          "message": {
+            "text": "Disabled TLS/SSL Certificate Verification: Disabling TLS certificate validation (rejectUnauthorized: false) makes network traffic susceptible to Man-in-the-Middle (MITM) attacks. (Remediation: Remove rejectUnauthorized: false and install proper root/intermediate certificates.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "endLine": 18,
+                  "snippet": {
+                    "text": "rejectUnauthorized: false"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-295",
+            "owasp": "A02:2021-Cryptographic Failures",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: rejectUnauthorized: true"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "server.js"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 18,
+                        "endLine": 18
+                      },
+                      "insertedContent": {
+                        "text": "rejectUnauthorized: true"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-JS-004",
+          "level": "error",
+          "message": {
+            "text": "Command Injection via child_process.exec: child_process.exec executes arbitrary commands in a shell environment, allowing command injection. (Remediation: Use child_process.execFile() or spawn() without a shell, passing arguments in an array.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 30,
+                  "endLine": 30,
+                  "snippet": {
+                    "text": "child_process.exec(\"cat \" + userFilename, (err, stdout) => {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-78",
+            "owasp": "A03:2021-Injection",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: child_process.execFile('command', [arg1, arg2])"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "server.js"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 30,
+                        "endLine": 30
+                      },
+                      "insertedContent": {
+                        "text": "child_process.execFile('command', [arg1, arg2])"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-JS-001",
+          "level": "error",
+          "message": {
+            "text": "Arbitrary Code Execution via eval(): Use of eval() in JavaScript executes strings as code, exposing the application to injection attacks. (Remediation: Avoid eval(). Use JSON.parse() for data serialization or safe parser alternatives.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 36,
+                  "endLine": 36,
+                  "snippet": {
+                    "text": "// Vulnerability 13: Arbitrary Code Execution via eval()"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-95",
+            "owasp": "A03:2021-Injection",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: JSON.parse(data)"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "server.js"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 36,
+                        "endLine": 36
+                      },
+                      "insertedContent": {
+                        "text": "JSON.parse(data)"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-JS-001",
+          "level": "error",
+          "message": {
+            "text": "Arbitrary Code Execution via eval(): Use of eval() in JavaScript executes strings as code, exposing the application to injection attacks. (Remediation: Avoid eval(). Use JSON.parse() for data serialization or safe parser alternatives.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 37,
+                  "endLine": 37,
+                  "snippet": {
+                    "text": "const result = eval(req.body.code);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-95",
+            "owasp": "A03:2021-Injection",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: JSON.parse(data)"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "server.js"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 37,
+                        "endLine": 37
+                      },
+                      "insertedContent": {
+                        "text": "JSON.parse(data)"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-JS-003",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection via String Concatenation: SQL query created by concatenating variables or template literals inside query(). (Remediation: Use parameterized queries: db.query('SELECT * FROM users WHERE id = $1', [userId]))"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 46,
+                  "endLine": 46,
+                  "snippet": {
+                    "text": "db.query(\"SELECT * FROM accounts WHERE id = \" + accountId);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-89",
+            "owasp": "A03:2021-Injection",
+            "severity": "CRITICAL"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: db.query('SELECT ... WHERE id = $1', [userId])"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "server.js"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 46,
+                        "endLine": 46
+                      },
+                      "insertedContent": {
+                        "text": "db.query('SELECT ... WHERE id = $1', [userId])"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SAST-JS-002",
+          "level": "error",
+          "message": {
+            "text": "Cross-Site Scripting (XSS) via innerHTML: Unsanitized assignment to innerHTML or dangerouslySetInnerHTML can lead to Cross-Site Scripting (XSS). (Remediation: Use textContent, innerText, or sanitize HTML input with DOMPurify.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 54,
+                  "endLine": 54,
+                  "snippet": {
+                    "text": "mockElement.innerHTML = profileHtml;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": "CWE-79",
+            "owasp": "A03:2021-Injection",
+            "severity": "HIGH"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "Suggested fix: element.textContent = sanitizedText;"
+              },
+              "fileChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "server.js"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 54,
+                        "endLine": 54
+                      },
+                      "insertedContent": {
+                        "text": "element.textContent = sanitizedText;"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

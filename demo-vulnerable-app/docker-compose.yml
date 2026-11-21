@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    # Vulnerability: Privileged container mode
+    privileged: true
+    ports:
+      # Vulnerability: Sensitive database port exposed to 0.0.0.0
+      - "5432:5432"
+    environment:
+      - DATABASE_PASSWORD=SecretProdPass!

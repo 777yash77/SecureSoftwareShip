@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+*/node_modules/
+package-lock.json
+
+# Python caches and virtual environments
+__pycache__/
+*/__pycache__/
+*/*/__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+
+# Build outputs
+build/
+dist/
+*.log
+
+# Local SecureShip database & audit cache
+.secureship/
+secureship.db
+*.token
+
+# IDE and OS files
+.DS_Store
+Thumbs.db
+.vscode-test/

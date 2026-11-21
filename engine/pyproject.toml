@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "secureship"
+version = "1.0.0"
+description = "Shift-Left DevSecOps Security Gate and Platform"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "SecureShip Team", email = "dev@secureship.internal" }
+]
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "pydantic>=2.0.0",
+    "httpx>=0.24.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "python-multipart>=0.0.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[project.scripts]
+secureship = "secureship.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["secureship*"]
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::pytest_asyncio.plugin.PytestDeprecationWarning",
+    "ignore:.*Using `httpx` with `starlette.testclient` is deprecated.*:DeprecationWarning",
+]

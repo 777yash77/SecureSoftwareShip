@@ -1,0 +1,55 @@
+name: SecureShip DevSecOps Gate
+
+on:
+  push:
+    branches: [ main, master, release/* ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  secureship-security-gate:
+    name: Shift-Left Security Scan & Ship-Readiness Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install SecureShip Engine
+        run: |
+          pip install --upgrade pip
+          pip install ./engine
+
+      - name: Run SecureShip Scan (Generate Reports & Gate Build)
+        run: |
+          mkdir -p reports
+          secureship scan . --format sarif --output reports/secureship.sarif
+          secureship scan . --format html --output reports/secureship-report.html
+          secureship scan . --format json --output reports/secureship-report.json
+          # Enforce Shift-Left Gate: Block PR if any HIGH or CRITICAL issues exist
+          secureship scan . --format table --fail-on high
+
+      - name: Upload SARIF to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: reports/secureship.sarif
+          category: secureship-shift-left
+
+      - name: Upload Security Reports Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secureship-security-reports
+          path: reports/
+          retention-days: 14

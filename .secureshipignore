@@ -1,0 +1,13 @@
+# SecureShip Ignore Patterns (gitignore-style)
+.git/
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+dist/
+build/
+coverage/
+*.log
+.DS_Store

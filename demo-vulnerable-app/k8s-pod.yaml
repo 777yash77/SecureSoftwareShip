@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-insecure-pod
+spec:
+  containers:
+    - name: web
+      image: demo-app:latest
+      # Vulnerability: Missing resources.limits (CPU/Memory)
+      securityContext:
+        # Vulnerability: Privileged securityContext
+        privileged: true

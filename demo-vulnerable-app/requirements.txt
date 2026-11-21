@@ -1,0 +1,4 @@
+# Vulnerable Python dependencies for SCA test verification
+requests==2.25.0
+urllib3==1.26.4
+flask==1.1.2

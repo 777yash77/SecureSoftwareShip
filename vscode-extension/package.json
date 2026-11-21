@@ -1,0 +1,127 @@
+{
+  "name": "secureship-vscode",
+  "displayName": "SecureShip — Shift-Left DevSecOps Gate",
+  "description": "Shift-left security scanner, OWASP/CWE diagnostics, and Ship-Readiness score for VS Code",
+  "version": "1.0.0",
+  "publisher": "secureship",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Security"
+  ],
+  "keywords": [
+    "security",
+    "devsecops",
+    "sast",
+    "secrets",
+    "sca",
+    "owasp",
+    "cwe"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "secureship.scanCurrentFile",
+        "title": "SecureShip: Scan Current File",
+        "category": "SecureShip",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "secureship.scanWorkspace",
+        "title": "SecureShip: Scan Workspace",
+        "category": "SecureShip",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "secureship.openDashboard",
+        "title": "SecureShip: Open Dashboard",
+        "category": "SecureShip",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "secureship.explainFinding",
+        "title": "SecureShip: Explain with AI Advisor",
+        "category": "SecureShip",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "secureship.installHooks",
+        "title": "SecureShip: Install Git Security Gates (Pre-Commit & Pre-Push)",
+        "category": "SecureShip",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "secureship.bypassPush",
+        "title": "SecureShip: Emergency Bypass & Force Push",
+        "category": "SecureShip",
+        "icon": "$(warning)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "secureship-explorer",
+          "title": "SecureShip",
+          "icon": "media/shield.svg"
+        }
+      ]
+    },
+    "views": {
+      "secureship-explorer": [
+        {
+          "id": "secureship.findingsView",
+          "name": "SecureShip Findings"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "SecureShip",
+      "properties": {
+        "secureship.serverUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8787",
+          "description": "URL of the local SecureShip FastAPI engine server."
+        },
+        "secureship.scanOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically scan files on save."
+        },
+        "secureship.minSeverity": {
+          "type": "string",
+          "enum": [
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+            "CRITICAL"
+          ],
+          "default": "LOW",
+          "description": "Minimum severity level to report in diagnostics."
+        },
+        "secureship.minScore": {
+          "type": "number",
+          "default": 80,
+          "description": "Custom quality gate passing score percentage threshold (e.g. 50, 65, 75, 90)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.3"
+  }
+}

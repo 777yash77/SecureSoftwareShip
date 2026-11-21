@@ -1,0 +1,45 @@
+pipeline {
+    agent any
+
+    environment {
+        SECURESHIP_FAIL_ON = 'high'
+        REPORTS_DIR = 'build/reports/secureship'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('DevSecOps Security Gate') {
+            steps {
+                sh '''
+                    mkdir -p ${REPORTS_DIR}
+                    pip install ./engine
+                    
+                    # Generate HTML/JSON artifacts
+                    secureship scan . --format html --output ${REPORTS_DIR}/security-report.html
+                    secureship scan . --format json --output ${REPORTS_DIR}/security-report.json
+                    
+                    # Enforce pipeline break on HIGH/CRITICAL vulnerabilities
+                    secureship scan . --format table --fail-on ${SECURESHIP_FAIL_ON}
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: "${REPORTS_DIR}/*", fingerprint: true, allowEmptyArchive: true
+                    publishHTML(target: [
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: "${REPORTS_DIR}",
+                        reportFiles: 'security-report.html',
+                        reportName: 'SecureShip Security Gate Report'
+                    ])
+                }
+            }
+        }
+    }
+}
