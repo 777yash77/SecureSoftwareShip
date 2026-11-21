@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from typing import List, Optional, Set
 
-from secureship.models import Finding, FindingCategory, Severity
+from secureship.models import Confidence, Finding, FindingCategory, Severity
 from secureship.scanners.base import BaseScanner
 from secureship.scorer import IgnoreMatcher
 
@@ -86,17 +86,16 @@ class SASTScanner(BaseScanner):
                 # Rule: Python SQL Injection in execute()
                 if func_name.endswith("execute") and node.args:
                     arg0 = node.args[0]
-                    # Check f-strings
-                    is_sqli = isinstance(arg0, ast.JoinedStr)
-                    # Check % formatting
-                    if isinstance(arg0, ast.BinOp) and isinstance(arg0.op, ast.Mod):
+                    is_sqli = False
+                    if isinstance(arg0, ast.JoinedStr):
+                        is_sqli = any(isinstance(v, ast.FormattedValue) for v in arg0.values)
+                    elif isinstance(arg0, ast.BinOp) and isinstance(arg0.op, ast.Mod):
                         is_sqli = True
-                    # Check .format()
-                    if isinstance(arg0, ast.Call) and isinstance(arg0.func, ast.Attribute) and arg0.func.attr == "format":
+                    elif isinstance(arg0, ast.Call) and isinstance(arg0.func, ast.Attribute) and arg0.func.attr == "format":
                         is_sqli = True
-                    # Check string concatenation '+'
-                    if isinstance(arg0, ast.BinOp) and isinstance(arg0.op, ast.Add):
-                        is_sqli = True
+                    elif isinstance(arg0, ast.BinOp) and isinstance(arg0.op, ast.Add):
+                        if not (isinstance(arg0.left, ast.Constant) and isinstance(arg0.right, ast.Constant)):
+                            is_sqli = True
 
                     if is_sqli and not IgnoreMatcher.is_line_suppressed(line_text, "SAST-PY-001"):
                         findings.append(
@@ -115,12 +114,16 @@ class SASTScanner(BaseScanner):
                                 description="SQL query formed using dynamic string interpolation inside execute(). Attackers can execute arbitrary SQL.",
                                 remediation="Use parameterized queries with placeholders: cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))",
                                 auto_fix_hint="cursor.execute('SELECT ... WHERE id = %s', (val,))",
+                                confidence=Confidence.HIGH,
                             )
                         )
 
                 # Rule: Python Command Injection (os.system, subprocess with shell=True)
                 if func_name in ("os.system", "system"):
                     if not IgnoreMatcher.is_line_suppressed(line_text, "SAST-PY-002"):
+                        conf = Confidence.HIGH
+                        if node.args and isinstance(node.args[0], ast.Constant):
+                            conf = Confidence.LOW
                         findings.append(
                             Finding(
                                 id=str(uuid.uuid4()),
@@ -137,6 +140,7 @@ class SASTScanner(BaseScanner):
                                 description="Direct invocation of os.system allows command injection if arguments are influenced by external input.",
                                 remediation="Use subprocess.run(['cmd', arg], shell=False) with an argument list instead of shell strings.",
                                 auto_fix_hint="subprocess.run(['command', arg], check=True)",
+                                confidence=conf,
                             )
                         )
 
@@ -160,9 +164,108 @@ class SASTScanner(BaseScanner):
                                 code_snippet=line_text.strip(),
                                 owasp_category="A03:2021-Injection",
                                 cwe_id="CWE-78",
-                                description="subprocess called with shell=True spawns a shell process vulnerable to argument injection.",
-                                remediation="Set shell=False and pass arguments as a list of strings: subprocess.run(['cmd', 'arg'])",
+                                description="subprocess called with shell=True delegates execution to the system shell interpreter, allowing command chaining.",
+                                remediation="Set shell=False and pass arguments as a list of strings: subprocess.run(['cmd', arg])",
                                 auto_fix_hint="shell=False",
+                                confidence=Confidence.HIGH,
+                            )
+                        )
+
+                # Rule: Server-Side Request Forgery (SSRF)
+                if func_name in ("requests.get", "requests.post", "requests.put", "requests.delete", "requests.request", "urllib.request.urlopen", "httpx.get", "httpx.post") and node.args:
+                    arg0 = node.args[0]
+                    if not isinstance(arg0, ast.Constant):
+                        if not IgnoreMatcher.is_line_suppressed(line_text, "SAST-PY-010"):
+                            findings.append(
+                                Finding(
+                                    id=str(uuid.uuid4()),
+                                    rule_id="SAST-PY-010",
+                                    title="Potential Server-Side Request Forgery (SSRF)",
+                                    category=FindingCategory.SAST,
+                                    severity=Severity.HIGH,
+                                    file_path=relative_path,
+                                    line_start=line_no,
+                                    line_end=getattr(node, "end_lineno", line_no),
+                                    code_snippet=line_text.strip(),
+                                    owasp_category="A10:2021-Server-Side Request Forgery",
+                                    cwe_id="CWE-918",
+                                    description="HTTP request issued with dynamic or user-controlled URL. Attackers can access internal metadata or intranet endpoints.",
+                                    remediation="Validate request URLs against a strict allowlist of domains before initiating requests.",
+                                    auto_fix_hint="validate_url(target_url)",
+                                    confidence=Confidence.HIGH,
+                                )
+                            )
+
+                # Rule: Path Traversal
+                if func_name in ("open", "send_file", "os.remove", "os.unlink") and node.args:
+                    arg0 = node.args[0]
+                    is_dynamic_path = isinstance(arg0, (ast.JoinedStr, ast.BinOp)) or (
+                        isinstance(arg0, ast.Call) and getattr(arg0.func, "attr", "") == "join"
+                    )
+                    if is_dynamic_path and not IgnoreMatcher.is_line_suppressed(line_text, "SAST-PY-011"):
+                        findings.append(
+                            Finding(
+                                id=str(uuid.uuid4()),
+                                rule_id="SAST-PY-011",
+                                title="Arbitrary File Read / Path Traversal",
+                                category=FindingCategory.SAST,
+                                severity=Severity.HIGH,
+                                file_path=relative_path,
+                                line_start=line_no,
+                                line_end=getattr(node, "end_lineno", line_no),
+                                code_snippet=line_text.strip(),
+                                owasp_category="A01:2021-Broken Access Control",
+                                cwe_id="CWE-22",
+                                description="File operation performed using dynamically constructed path, exposing application to directory traversal ('../').",
+                                remediation="Sanitize user filename with os.path.basename() and verify the resolved path stays within the base directory.",
+                                auto_fix_hint="os.path.basename(filename)",
+                                confidence=Confidence.HIGH,
+                            )
+                        )
+
+                # Rule: Insecure Deserialization via marshal / shelve
+                if func_name in ("marshal.loads", "shelve.open", "_pickle.loads"):
+                    if not IgnoreMatcher.is_line_suppressed(line_text, "SAST-PY-012"):
+                        findings.append(
+                            Finding(
+                                id=str(uuid.uuid4()),
+                                rule_id="SAST-PY-012",
+                                title="Insecure Deserialization (marshal/shelve)",
+                                category=FindingCategory.SAST,
+                                severity=Severity.CRITICAL,
+                                file_path=relative_path,
+                                line_start=line_no,
+                                line_end=getattr(node, "end_lineno", line_no),
+                                code_snippet=line_text.strip(),
+                                owasp_category="A08:2021-Software and Data Integrity Failures",
+                                cwe_id="CWE-502",
+                                description="Deserializing objects using marshal or shelve from untrusted sources enables arbitrary code execution.",
+                                remediation="Use safe serialization formats like JSON or Protocol Buffers.",
+                                auto_fix_hint="json.loads(data)",
+                                confidence=Confidence.HIGH,
+                            )
+                        )
+
+                # Rule: Insecure XML Parsing (XXE)
+                if func_name in ("ET.parse", "xml.etree.ElementTree.parse", "minidom.parseString", "lxml.etree.parse"):
+                    if not IgnoreMatcher.is_line_suppressed(line_text, "SAST-PY-014"):
+                        findings.append(
+                            Finding(
+                                id=str(uuid.uuid4()),
+                                rule_id="SAST-PY-014",
+                                title="Insecure XML Entity Parsing (XXE)",
+                                category=FindingCategory.SAST,
+                                severity=Severity.HIGH,
+                                file_path=relative_path,
+                                line_start=line_no,
+                                line_end=getattr(node, "end_lineno", line_no),
+                                code_snippet=line_text.strip(),
+                                owasp_category="A05:2021-Security Misconfiguration",
+                                cwe_id="CWE-611",
+                                description="XML parsing without entity restrictions can lead to XML External Entity (XXE) file disclosure or SSRF.",
+                                remediation="Use defusedxml or disable external entity resolution explicitly.",
+                                auto_fix_hint="import defusedxml.ElementTree as ET",
+                                confidence=Confidence.HIGH,
                             )
                         )
 
@@ -418,6 +521,7 @@ class SASTScanner(BaseScanner):
                 "desc": "Use of eval() in JavaScript executes strings as code, exposing the application to injection attacks.",
                 "rem": "Avoid eval(). Use JSON.parse() for data serialization or safe parser alternatives.",
                 "fix": "JSON.parse(data)",
+                "confidence": Confidence.HIGH,
             },
             {
                 "id": "SAST-JS-002",
@@ -429,6 +533,7 @@ class SASTScanner(BaseScanner):
                 "desc": "Unsanitized assignment to innerHTML or dangerouslySetInnerHTML can lead to Cross-Site Scripting (XSS).",
                 "rem": "Use textContent, innerText, or sanitize HTML input with DOMPurify.",
                 "fix": "element.textContent = sanitizedText;",
+                "confidence": Confidence.HIGH,
             },
             {
                 "id": "SAST-JS-003",
@@ -440,6 +545,7 @@ class SASTScanner(BaseScanner):
                 "desc": "SQL query created by concatenating variables or template literals inside query().",
                 "rem": "Use parameterized queries: db.query('SELECT * FROM users WHERE id = $1', [userId])",
                 "fix": "db.query('SELECT ... WHERE id = $1', [userId])",
+                "confidence": Confidence.HIGH,
             },
             {
                 "id": "SAST-JS-004",
@@ -451,6 +557,7 @@ class SASTScanner(BaseScanner):
                 "desc": "child_process.exec executes arbitrary commands in a shell environment, allowing command injection.",
                 "rem": "Use child_process.execFile() or spawn() without a shell, passing arguments in an array.",
                 "fix": "child_process.execFile('command', [arg1, arg2])",
+                "confidence": Confidence.HIGH,
             },
             {
                 "id": "SAST-JS-005",
@@ -462,6 +569,7 @@ class SASTScanner(BaseScanner):
                 "desc": "Disabling TLS certificate validation (rejectUnauthorized: false) makes network traffic susceptible to Man-in-the-Middle (MITM) attacks.",
                 "rem": "Remove rejectUnauthorized: false and install proper root/intermediate certificates.",
                 "fix": "rejectUnauthorized: true",
+                "confidence": Confidence.HIGH,
             },
             {
                 "id": "SAST-JS-006",
@@ -473,6 +581,67 @@ class SASTScanner(BaseScanner):
                 "desc": "Hardcoded static secret key passed to jwt.sign(). An attacker can forge arbitrary tokens.",
                 "rem": "Retrieve secret key from environment variables: process.env.JWT_SECRET",
                 "fix": "process.env.JWT_SECRET",
+                "confidence": Confidence.HIGH,
+            },
+            {
+                "id": "SAST-JS-007",
+                "title": "Server-Side Request Forgery (SSRF) in Node.js",
+                "regex": re.compile(r"""(?:\baxios\.(?:get|post|put|request)|\bfetch|\bhttp\.get|\bhttps\.get)\s*\(\s*(?:['"`].*?\+.*?|`[^`]*\$\{.*?\}[^`]*`|[A-Za-z0-9_]+)"""),
+                "severity": Severity.HIGH,
+                "owasp": "A10:2021-Server-Side Request Forgery",
+                "cwe": "CWE-918",
+                "desc": "Node.js HTTP request made to dynamic URL without prior hostname allowlisting, risking SSRF.",
+                "rem": "Validate target URL using a strict hostname whitelist before initiating the network call.",
+                "fix": "if (!isAllowedUrl(targetUrl)) throw new Error('Blocked SSRF');",
+                "confidence": Confidence.HIGH,
+            },
+            {
+                "id": "SAST-JS-008",
+                "title": "Arbitrary File Read / Path Traversal in Node.js",
+                "regex": re.compile(r"""(?:fs\.readFile|fs\.readFileSync|fs\.createReadStream|fs\.unlink|fs\.writeFile)\s*\(\s*(?:['"`].*?\+.*?|`[^`]*\$\{.*?\}[^`]*`|[A-Za-z0-9_]+)"""),
+                "severity": Severity.HIGH,
+                "owasp": "A01:2021-Broken Access Control",
+                "cwe": "CWE-22",
+                "desc": "File system access using dynamic unvalidated file paths, enabling directory traversal.",
+                "rem": "Sanitize input with path.basename() or ensure resolved path starts within safe root directory.",
+                "fix": "path.basename(userFilename)",
+                "confidence": Confidence.HIGH,
+            },
+            {
+                "id": "SAST-JS-009",
+                "title": "Prototype Pollution Risk via Object Merge",
+                "regex": re.compile(r"""(?:Object\.assign\s*\(\s*\{\}\s*,\s*(?:req\.body|payload|data|input)|\b_\.merge\s*\(\s*[^,]+,\s*(?:req\.body|payload|input))"""),
+                "severity": Severity.HIGH,
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-1321",
+                "desc": "Unsafe merge of user payload into object without key filtering, leading to Prototype Pollution.",
+                "rem": "Sanitize user objects to strip __proto__, constructor, and prototype properties.",
+                "fix": "sanitizeObject(req.body)",
+                "confidence": Confidence.MEDIUM,
+            },
+            {
+                "id": "SAST-JS-010",
+                "title": "Permissive CORS Configuration (Wildcard Origin)",
+                "regex": re.compile(r"""(?:origin\s*:\s*["']\*["']|cors\s*\(\s*\{\s*origin\s*:\s*true|Access-Control-Allow-Origin['"]?\s*,\s*['"]\*['"])"""),
+                "severity": Severity.MEDIUM,
+                "owasp": "A05:2021-Security Misconfiguration",
+                "cwe": "CWE-942",
+                "desc": "Permissive wildcard CORS origin allows any external site to read protected responses.",
+                "rem": "Specify explicit trusted origins in CORS configuration.",
+                "fix": "cors({ origin: ['https://app.example.com'] })",
+                "confidence": Confidence.HIGH,
+            },
+            {
+                "id": "SAST-JS-011",
+                "title": "Insecure Cookie Settings (Missing HttpOnly / Secure)",
+                "regex": re.compile(r"""(?:res\.cookie\s*\([^)]*?(?:httpOnly\s*:\s*false|secure\s*:\s*false)|sameSite\s*:\s*["']none["'])"""),
+                "severity": Severity.MEDIUM,
+                "owasp": "A05:2021-Security Misconfiguration",
+                "cwe": "CWE-614",
+                "desc": "Cookies created without httpOnly or secure flags can be accessed by client-side scripts via XSS.",
+                "rem": "Set { httpOnly: true, secure: true, sameSite: 'strict' } on sensitive session cookies.",
+                "fix": "res.cookie('token', val, { httpOnly: true, secure: true, sameSite: 'strict' })",
+                "confidence": Confidence.HIGH,
             },
         ]
 
@@ -500,6 +669,7 @@ class SASTScanner(BaseScanner):
                             description=rule["desc"],
                             remediation=rule["rem"],
                             auto_fix_hint=rule["fix"],
+                            confidence=rule.get("confidence", Confidence.HIGH),
                         )
                     )
 

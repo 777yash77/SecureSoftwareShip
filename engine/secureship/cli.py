@@ -21,7 +21,7 @@ from rich.syntax import Syntax
 from secureship.advisor import EXPERT_KNOWLEDGE_BASE, SecurityAdvisor
 from secureship.config import load_config, save_config
 from secureship.db import HistoryDB
-from secureship.models import Finding, FindingCategory, Severity, ShipStatus
+from secureship.models import Confidence, Finding, FindingCategory, Severity, ShipStatus
 from secureship.reporters.certificate_reporter import render_certificate_report
 from secureship.reporters.console_reporter import render_console_report
 from secureship.reporters.html_reporter import render_html_report
@@ -168,6 +168,13 @@ def scan(
         "--strict",
         help="Enforce strict zero-tolerance on specified categories (e.g. --strict SCA --strict SECRETS)",
     ),
+    confidence: Optional[str] = typer.Option(
+        None,
+        "--confidence",
+        "--min-confidence",
+        "--accuracy",
+        help="High-accuracy filter: 'high' (zero false-positives), 'medium', or 'low'",
+    ),
     ignore_gate: bool = typer.Option(
         False, "--ignore", "--bypass", "--force-push", help="Emergency override: ignore quality gate and allow git push"
     ),
@@ -242,6 +249,14 @@ def scan(
             except ValueError:
                 typer.secho(f"Warning: Unknown strict category '{sc}'.", fg=typer.colors.YELLOW, err=True)
 
+    min_conf_enum: Optional[Confidence] = None
+    if confidence:
+        try:
+            min_conf_enum = Confidence(confidence.upper())
+        except ValueError:
+            typer.secho(f"Error: Invalid --confidence '{confidence}'. Choose from high, medium, or low.", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=2)
+
     strict_to_pass = list(set(strict_cat_enums)) if strict_cat_enums else None
     parsed_min_score = parse_score_threshold(min_score)
     engine = SecureShipEngine(target_path=str(target_path), categories=categories_to_pass)
@@ -251,12 +266,14 @@ def scan(
             min_severity=min_sev_enum,
             min_score=parsed_min_score,
             strict_categories=strict_to_pass,
+            min_confidence=min_conf_enum,
         )
     else:
         result = engine.scan(
             min_severity=min_sev_enum,
             min_score=parsed_min_score,
             strict_categories=strict_to_pass,
+            min_confidence=min_conf_enum,
         )
 
     # Render according to requested format
@@ -357,19 +374,23 @@ def config(
     github_token: Optional[str] = typer.Option(
         None, "--github-token", help="Store GitHub Personal Access Token in .secureshiprc for updates"
     ),
+    min_confidence: Optional[str] = typer.Option(
+        None, "--min-confidence", "--accuracy", help="Configure minimum accuracy confidence level: high, medium, low"
+    ),
     show: bool = typer.Option(False, "--show", "-s", help="Display current quality gate configuration"),
 ) -> None:
     """Configure or view repository quality gate rules (.secureshiprc)."""
     target = Path(path).resolve()
     current_cfg = load_config(target)
 
-    no_args = min_score is None and not strict_sca and not strict_iac and not strict_sec and not strict_sast and github_token is None
+    no_args = min_score is None and not strict_sca and not strict_iac and not strict_sec and not strict_sast and github_token is None and min_confidence is None
     if show or no_args:
         cfg_file = target / ".secureshiprc"
         typer.secho(f"\n⚙️  SecureShip Quality Gate Configuration ({cfg_file.name if cfg_file.exists() else 'defaults'}):", fg=typer.colors.CYAN, bold=True)
         typer.echo(f"   • Passing Score (min_score): {current_cfg.get('min_score', 80)} / 100")
         stricts = current_cfg.get("strict_categories", [])
         typer.echo(f"   • Strict Blocker Categories:  {', '.join(stricts) if stricts else 'None (default: Critical severity blocks)'}")
+        typer.echo(f"   • Accuracy Confidence Gate:   {current_cfg.get('min_confidence', 'All Confidences')}")
         has_token = bool(current_cfg.get("github_token"))
         typer.echo(f"   • GitHub Private Token:       {'Configured (masked)' if has_token else 'Not set'}\n")
         return
@@ -378,6 +399,14 @@ def config(
     parsed_score = parse_score_threshold(min_score)
     if parsed_score is not None:
         updates["min_score"] = parsed_score
+
+    if min_confidence is not None:
+        try:
+            valid_conf = Confidence(min_confidence.upper())
+            updates["min_confidence"] = valid_conf.value
+        except ValueError:
+            typer.secho(f"Error: Invalid --min-confidence '{min_confidence}'. Choose from high, medium, or low.", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=2)
 
     if github_token is not None:
         if github_token.strip():
@@ -401,6 +430,8 @@ def config(
     typer.secho(f"\n✅ Updated SecureShip quality gate configuration in {saved_path}:", fg=typer.colors.GREEN, bold=True)
     if "min_score" in updates:
         typer.echo(f"   • Passing Score Threshold set to: {updates['min_score']}%")
+    if "min_confidence" in updates:
+        typer.echo(f"   • Accuracy Confidence Filter set to: {updates['min_confidence']}")
     if "github_token" in updates:
         typer.echo("   • GitHub Personal Access Token saved for private repository updates.")
     typer.echo(f"   • Strict Categories: {', '.join(updates['strict_categories']) if updates['strict_categories'] else 'None'}\n")

@@ -49,6 +49,7 @@ class Scorer:
         duration_ms: float,
         min_score: int = 80,
         strict_categories: Optional[List[FindingCategory]] = None,
+        confidence_filter: Optional[str] = None,
     ) -> ScanSummary:
         critical_count = sum(1 for f in findings if f.severity == Severity.CRITICAL)
         high_count = sum(1 for f in findings if f.severity == Severity.HIGH)
@@ -96,6 +97,7 @@ class Scorer:
             security_score=score,
             min_score=min_score,
             strict_violations=strict_violations,
+            confidence_filter=confidence_filter,
             ship_status=status,
             owasp_breakdown=owasp_breakdown,
             category_breakdown=category_breakdown,

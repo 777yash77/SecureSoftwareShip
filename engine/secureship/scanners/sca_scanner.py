@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import httpx
 
-from secureship.models import Finding, FindingCategory, Severity
+from secureship.models import Confidence, Finding, FindingCategory, Severity
 from secureship.scanners.base import BaseScanner
 from secureship.scorer import IgnoreMatcher
 
@@ -56,6 +56,56 @@ BUILTIN_CVE_DATABASE: Dict[str, Dict[str, Any]] = {
         "cwe": "CWE-601",
         "desc": "Express before 4.19.2 allows open redirection via mishandling user-supplied URL strings.",
     },
+    "npm:semver": {
+        "max_vulnerable": "7.5.1",
+        "cve": "CVE-2022-25883",
+        "title": "ReDoS in Semver Range Validation",
+        "severity": Severity.HIGH,
+        "safe_version": "7.5.2",
+        "owasp": "A06:2021-Vulnerable and Outdated Components",
+        "cwe": "CWE-1333",
+        "desc": "semver before 7.5.2 is vulnerable to regular expression denial of service in range comparison.",
+    },
+    "npm:minimist": {
+        "max_vulnerable": "1.2.5",
+        "cve": "CVE-2021-44906",
+        "title": "Prototype Pollution in minimist",
+        "severity": Severity.HIGH,
+        "safe_version": "1.2.6",
+        "owasp": "A06:2021-Vulnerable and Outdated Components",
+        "cwe": "CWE-1321",
+        "desc": "minimist before 1.2.6 is vulnerable to prototype pollution via constructor and prototype keys.",
+    },
+    "npm:qs": {
+        "max_vulnerable": "6.10.2",
+        "cve": "CVE-2022-24999",
+        "title": "Prototype Pollution in qs parser",
+        "severity": Severity.HIGH,
+        "safe_version": "6.10.3",
+        "owasp": "A06:2021-Vulnerable and Outdated Components",
+        "cwe": "CWE-1321",
+        "desc": "qs before 6.10.3 allows prototype pollution via parameter parsing.",
+    },
+    "npm:moment": {
+        "max_vulnerable": "2.29.3",
+        "cve": "CVE-2022-24785",
+        "title": "Path Traversal in moment locale loader",
+        "severity": Severity.HIGH,
+        "safe_version": "2.29.4",
+        "owasp": "A06:2021-Vulnerable and Outdated Components",
+        "cwe": "CWE-22",
+        "desc": "moment before 2.29.4 path traversal allows loading arbitrary user-specified locale files.",
+    },
+    "npm:ejs": {
+        "max_vulnerable": "3.1.9",
+        "cve": "CVE-2024-33883",
+        "title": "Template Injection in EJS",
+        "severity": Severity.CRITICAL,
+        "safe_version": "3.1.10",
+        "owasp": "A06:2021-Vulnerable and Outdated Components",
+        "cwe": "CWE-94",
+        "desc": "EJS before 3.1.10 allows arbitrary JavaScript execution via prototype polluted options.",
+    },
     "pypi:requests": {
         "max_vulnerable": "2.30.0",
         "cve": "CVE-2023-32681",
@@ -96,6 +146,56 @@ BUILTIN_CVE_DATABASE: Dict[str, Dict[str, Any]] = {
         "cwe": "CWE-1333",
         "desc": "EmailValidator and URLValidator are susceptible to catastrophic backtracking regex attacks.",
     },
+    "pypi:jinja2": {
+        "max_vulnerable": "3.1.2",
+        "cve": "CVE-2024-34064",
+        "title": "HTML Attribute Injection in Jinja2",
+        "severity": Severity.HIGH,
+        "safe_version": "3.1.4",
+        "owasp": "A06:2021-Vulnerable and Outdated Components",
+        "cwe": "CWE-79",
+        "desc": "Jinja2 before 3.1.4 allows HTML attribute injection and XSS via xmlattr filter.",
+    },
+    "pypi:werkzeug": {
+        "max_vulnerable": "3.0.1",
+        "cve": "CVE-2024-34069",
+        "title": "Untrusted Debugger PIN Generation in Werkzeug",
+        "severity": Severity.HIGH,
+        "safe_version": "3.0.3",
+        "owasp": "A06:2021-Vulnerable and Outdated Components",
+        "cwe": "CWE-330",
+        "desc": "Werkzeug debugger PIN calculation is predictable, allowing unauthorized debugger console access.",
+    },
+    "pypi:cryptography": {
+        "max_vulnerable": "41.0.5",
+        "cve": "CVE-2023-49083",
+        "title": "NULL-Dereference in PKCS7 Parsing in cryptography",
+        "severity": Severity.HIGH,
+        "safe_version": "41.0.6",
+        "owasp": "A06:2021-Vulnerable and Outdated Components",
+        "cwe": "CWE-476",
+        "desc": "cryptography before 41.0.6 is vulnerable to denial of service via NULL pointer dereference in PKCS7.",
+    },
+    "pypi:pillow": {
+        "max_vulnerable": "10.0.0",
+        "cve": "CVE-2023-50447",
+        "title": "Arbitrary Code Execution via Environment Injection in Pillow",
+        "severity": Severity.CRITICAL,
+        "safe_version": "10.0.1",
+        "owasp": "A06:2021-Vulnerable and Outdated Components",
+        "cwe": "CWE-94",
+        "desc": "Pillow before 10.0.1 allows arbitrary code execution via ImageFont.load_default environment variables.",
+    },
+    "pypi:paramiko": {
+        "max_vulnerable": "3.3.1",
+        "cve": "CVE-2023-48795",
+        "title": "Terrapin Prefix Truncation Attack in Paramiko",
+        "severity": Severity.MEDIUM,
+        "safe_version": "3.4.0",
+        "owasp": "A06:2021-Vulnerable and Outdated Components",
+        "cwe": "CWE-345",
+        "desc": "Paramiko before 3.4.0 allows prefix truncation attacks (Terrapin) on ChaCha20-Poly1305 and CBC-EtM SSH connections.",
+    },
     "maven:org.apache.logging.log4j:log4j-core": {
         "max_vulnerable": "2.14.1",
         "cve": "CVE-2021-44228",
@@ -115,6 +215,16 @@ BUILTIN_CVE_DATABASE: Dict[str, Dict[str, Any]] = {
         "owasp": "A06:2021-Vulnerable and Outdated Components",
         "cwe": "CWE-94",
         "desc": "Spring Framework RCE via data binding on JDK 9+ when deployed as a WAR on Tomcat.",
+    },
+    "maven:org.apache.struts:struts2-core": {
+        "max_vulnerable": "2.5.25",
+        "cve": "CVE-2020-17530",
+        "title": "OGNL Evaluation Remote Code Execution in Struts2",
+        "severity": Severity.CRITICAL,
+        "safe_version": "2.5.26",
+        "owasp": "A06:2021-Vulnerable and Outdated Components",
+        "cwe": "CWE-94",
+        "desc": "Apache Struts 2 allows remote code execution via forced OGNL evaluation in tag attributes.",
     },
 }
 
@@ -343,6 +453,7 @@ class SCAScanner(BaseScanner):
                         description=vuln_info["desc"],
                         remediation=f"Upgrade {name} to version {vuln_info['safe_version']} or higher.",
                         auto_fix_hint=f"{name}@{vuln_info['safe_version']}",
+                        confidence=Confidence.HIGH,
                     )
                 )
 

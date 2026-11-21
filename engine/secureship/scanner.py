@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import concurrent.futures
 import datetime
 import os
 import re
@@ -11,7 +12,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from secureship.config import load_config
 from secureship.db import HistoryDB
-from secureship.models import Finding, FindingCategory, ScanResult, Severity
+from secureship.models import Confidence, Finding, FindingCategory, ScanResult, Severity
 from secureship.scanners import (
     BaseScanner,
     IaCScanner,
@@ -51,7 +52,8 @@ class SecureShipEngine:
         self,
         min_score: Optional[int] = None,
         strict_categories: Optional[List[FindingCategory]] = None,
-    ) -> Tuple[int, List[FindingCategory]]:
+        min_confidence: Optional[Confidence] = None,
+    ) -> Tuple[int, List[FindingCategory], Optional[Confidence]]:
         cfg = load_config(self.target_path)
         effective_min = min_score if min_score is not None else int(cfg.get("min_score", 80))
 
@@ -67,21 +69,29 @@ class SecureShipEngine:
         else:
             effective_strict = []
 
-        return effective_min, effective_strict
+        effective_conf = min_confidence
+        if effective_conf is None and "min_confidence" in cfg:
+            try:
+                effective_conf = Confidence(cfg["min_confidence"].upper())
+            except ValueError:
+                pass
+
+        return effective_min, effective_strict, effective_conf
 
     def scan(
         self,
         min_severity: Optional[Severity] = None,
         min_score: Optional[int] = None,
         strict_categories: Optional[List[FindingCategory]] = None,
+        min_confidence: Optional[Confidence] = None,
     ) -> ScanResult:
-        """Executes full scan over target_path (directory or single file)."""
+        """Executes full high-performance scan over target_path with optional parallel execution."""
         start_time = time.perf_counter()
         scan_id = str(uuid.uuid4())
         timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-        effective_min_score, effective_strict = self._resolve_effective_config(
-            min_score=min_score, strict_categories=strict_categories
+        effective_min_score, effective_strict, effective_confidence = self._resolve_effective_config(
+            min_score=min_score, strict_categories=strict_categories, min_confidence=min_confidence
         )
 
         all_findings: List[Finding] = []
@@ -106,6 +116,7 @@ class SecureShipEngine:
                 duration_ms,
                 min_score=effective_min_score,
                 strict_categories=effective_strict,
+                confidence_filter=min_confidence.value if min_confidence else None,
             )
             return ScanResult(
                 scan_id=scan_id,
@@ -123,9 +134,9 @@ class SecureShipEngine:
             files_scanned = 1
             lines_scanned = lines
         elif self.target_path.is_dir():
-            # Scan directory recursively
+            # Collect files for multi-threaded parallel scanning
+            file_candidates: List[Tuple[Path, str]] = []
             for root, dirs, files in os.walk(self.target_path):
-                # Filter out ignored directories in-place to avoid descending
                 dirs[:] = [
                     d
                     for d in dirs
@@ -142,16 +153,34 @@ class SecureShipEngine:
                     except ValueError:
                         rel_path = file_path.as_posix()
 
-                    findings, lines = self._scan_single_file(file_path, rel_path)
-                    if lines > 0 or findings:
-                        files_scanned += 1
-                        lines_scanned += lines
-                    all_findings.extend(findings)
+                    file_candidates.append((file_path, rel_path))
+
+            # Execute parallel scan using ThreadPoolExecutor
+            max_workers = min(32, max(4, (os.cpu_count() or 4) * 2))
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_file = {
+                    executor.submit(self._scan_single_file, fp, rp): (fp, rp)
+                    for fp, rp in file_candidates
+                }
+                for fut in concurrent.futures.as_completed(future_to_file):
+                    try:
+                        findings, lines = fut.result()
+                        if lines > 0 or findings:
+                            files_scanned += 1
+                            lines_scanned += lines
+                        all_findings.extend(findings)
+                    except Exception:
+                        pass
 
         # Filter by min_severity if requested
         if min_severity:
             min_weight = min_severity.weight
             all_findings = [f for f in all_findings if f.severity.weight >= min_weight]
+
+        # Filter by min_confidence if requested (High Accuracy mode)
+        if effective_confidence:
+            min_conf_weight = effective_confidence.weight
+            all_findings = [f for f in all_findings if f.confidence.weight >= min_conf_weight]
 
         duration_ms = (time.perf_counter() - start_time) * 1000.0
         summary = Scorer.generate_summary(
@@ -161,6 +190,7 @@ class SecureShipEngine:
             duration_ms=duration_ms,
             min_score=effective_min_score,
             strict_categories=effective_strict,
+            confidence_filter=effective_confidence.value if effective_confidence else None,
         )
 
         result = ScanResult(
@@ -184,14 +214,15 @@ class SecureShipEngine:
         min_severity: Optional[Severity] = None,
         min_score: Optional[int] = None,
         strict_categories: Optional[List[FindingCategory]] = None,
+        min_confidence: Optional[Confidence] = None,
     ) -> ScanResult:
         """Executes fast diff scan on Git staged changes only."""
         start_time = time.perf_counter()
         scan_id = str(uuid.uuid4())
         timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-        effective_min_score, effective_strict = self._resolve_effective_config(
-            min_score=min_score, strict_categories=strict_categories
+        effective_min_score, effective_strict, effective_confidence = self._resolve_effective_config(
+            min_score=min_score, strict_categories=strict_categories, min_confidence=min_confidence
         )
 
         staged_files_map = self._get_git_staged_changes()
@@ -221,6 +252,10 @@ class SecureShipEngine:
             min_weight = min_severity.weight
             all_findings = [f for f in all_findings if f.severity.weight >= min_weight]
 
+        if effective_confidence:
+            min_conf_weight = effective_confidence.weight
+            all_findings = [f for f in all_findings if f.confidence.weight >= min_conf_weight]
+
         duration_ms = (time.perf_counter() - start_time) * 1000.0
         summary = Scorer.generate_summary(
             findings=all_findings,
@@ -229,6 +264,7 @@ class SecureShipEngine:
             duration_ms=duration_ms,
             min_score=effective_min_score,
             strict_categories=effective_strict,
+            confidence_filter=effective_confidence.value if effective_confidence else None,
         )
 
         result = ScanResult(

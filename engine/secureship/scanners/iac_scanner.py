@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 from typing import List, Optional, Set
 
-from secureship.models import Finding, FindingCategory, Severity
+from secureship.models import Confidence, Finding, FindingCategory, Severity
 from secureship.scanners.base import BaseScanner
 from secureship.scorer import IgnoreMatcher
 
@@ -99,6 +99,52 @@ class IaCScanner(BaseScanner):
                             )
                         )
 
+            # Check ADD instruction
+            if re.match(r"^ADD\s+", line_stripped, re.IGNORECASE):
+                if not IgnoreMatcher.is_line_suppressed(line, "IAC-DOCKER-004"):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id="IAC-DOCKER-004",
+                            title="Dangerous ADD Instruction in Dockerfile",
+                            category=FindingCategory.IAC,
+                            severity=Severity.MEDIUM,
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line_stripped,
+                            owasp_category="A05:2021-Security Misconfiguration",
+                            cwe_id="CWE-829",
+                            description="ADD automatically uncompresses archives and fetches remote URLs. Use COPY for predictable, secure local file copying.",
+                            remediation="Replace ADD with COPY unless remote archive unpacking is strictly intended.",
+                            auto_fix_hint="COPY src dest",
+                            confidence=Confidence.HIGH,
+                        )
+                    )
+
+            # Check curl/wget piped to shell
+            if re.search(r"(?:curl|wget)\s+[^|]+\|\s*(?:sh|bash|ash|zsh)", line_stripped, re.IGNORECASE):
+                if not IgnoreMatcher.is_line_suppressed(line, "IAC-DOCKER-005"):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id="IAC-DOCKER-005",
+                            title="Insecure Pipe to Shell (curl/wget | sh)",
+                            category=FindingCategory.IAC,
+                            severity=Severity.HIGH,
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line_stripped,
+                            owasp_category="A03:2021-Injection",
+                            cwe_id="CWE-78",
+                            description="Piping remote scripts from curl/wget directly to a shell runs untrusted, unverified code during container build.",
+                            remediation="Download the script first, verify its cryptographic hash or GPG signature, and then execute it.",
+                            auto_fix_hint="Download script and verify checksum before execution",
+                            confidence=Confidence.HIGH,
+                        )
+                    )
+
             # Check for secrets in ENV or ARG
             secret_match = re.match(
                 r"^(?:ENV|ARG)\s+([A-Za-z0-9_]+)\s*[:=]?\s*['\"]?([^'\"\s]+)['\"]?",
@@ -186,6 +232,52 @@ class IaCScanner(BaseScanner):
                             description="Container configured with privileged: true has full host device and kernel access, allowing container escapes.",
                             remediation="Remove privileged: true and grant only explicit Linux capabilities via cap_add if required.",
                             auto_fix_hint="privileged: false",
+                        )
+                    )
+
+            # Check docker socket mount
+            if "/var/run/docker.sock" in line_stripped:
+                if not IgnoreMatcher.is_line_suppressed(line, "IAC-COMPOSE-003"):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id="IAC-COMPOSE-003",
+                            title="Docker Daemon Socket Mounted Inside Container",
+                            category=FindingCategory.IAC,
+                            severity=Severity.CRITICAL,
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line_stripped,
+                            owasp_category="A05:2021-Security Misconfiguration",
+                            cwe_id="CWE-250",
+                            description="Mounting /var/run/docker.sock gives the container full administrative control over the host Docker daemon, allowing root host takeover.",
+                            remediation="Avoid mounting docker.sock into containers. Use isolated Docker-in-Docker or dedicated build agents.",
+                            auto_fix_hint="Remove /var/run/docker.sock volume mount",
+                            confidence=Confidence.HIGH,
+                        )
+                    )
+
+            # Check host network mode
+            if re.search(r"network_mode\s*:\s*['\"]?host['\"]?", line_stripped, re.IGNORECASE):
+                if not IgnoreMatcher.is_line_suppressed(line, "IAC-COMPOSE-004"):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id="IAC-COMPOSE-004",
+                            title="Host Network Mode Enabled",
+                            category=FindingCategory.IAC,
+                            severity=Severity.HIGH,
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line_stripped,
+                            owasp_category="A05:2021-Security Misconfiguration",
+                            cwe_id="CWE-668",
+                            description="network_mode: 'host' disables container network isolation and exposes host network services directly.",
+                            remediation="Use bridge or user-defined overlay networks with specific port mappings.",
+                            auto_fix_hint="network_mode: bridge",
+                            confidence=Confidence.HIGH,
                         )
                     )
 
@@ -278,6 +370,49 @@ class IaCScanner(BaseScanner):
                         description="Pod securityContext has privileged: true, allowing pod root to execute host operations.",
                         remediation="Set privileged: false and drop unnecessary capabilities.",
                         auto_fix_hint="privileged: false",
+                        confidence=Confidence.HIGH,
+                    )
+                )
+
+            if "allowPrivilegeEscalation: true" in line_stripped:
+                findings.append(
+                    Finding(
+                        id=str(uuid.uuid4()),
+                        rule_id="IAC-K8S-003",
+                        title="Container Privilege Escalation Allowed",
+                        category=FindingCategory.IAC,
+                        severity=Severity.HIGH,
+                        file_path=relative_path,
+                        line_start=idx,
+                        line_end=idx,
+                        code_snippet=line_stripped,
+                        owasp_category="A05:2021-Security Misconfiguration",
+                        cwe_id="CWE-250",
+                        description="allowPrivilegeEscalation: true allows container processes to gain more privileges than their parent process via setuid binaries.",
+                        remediation="Set securityContext.allowPrivilegeEscalation: false.",
+                        auto_fix_hint="allowPrivilegeEscalation: false",
+                        confidence=Confidence.HIGH,
+                    )
+                )
+
+            if "readOnlyRootFilesystem: false" in line_stripped:
+                findings.append(
+                    Finding(
+                        id=str(uuid.uuid4()),
+                        rule_id="IAC-K8S-004",
+                        title="Writable Container Root Filesystem",
+                        category=FindingCategory.IAC,
+                        severity=Severity.MEDIUM,
+                        file_path=relative_path,
+                        line_start=idx,
+                        line_end=idx,
+                        code_snippet=line_stripped,
+                        owasp_category="A05:2021-Security Misconfiguration",
+                        cwe_id="CWE-250",
+                        description="Container root filesystem is writable, allowing malicious software or payloads to be written to disk.",
+                        remediation="Set securityContext.readOnlyRootFilesystem: true and use emptyDir mounts for temporary write directories.",
+                        auto_fix_hint="readOnlyRootFilesystem: true",
+                        confidence=Confidence.HIGH,
                     )
                 )
 

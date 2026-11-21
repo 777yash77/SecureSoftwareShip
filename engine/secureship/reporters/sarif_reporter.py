@@ -42,6 +42,9 @@ def render_sarif_report(result: ScanResult) -> str:
         sarif_entry: Dict[str, Any] = {
             "ruleId": f.rule_id,
             "level": level_map.get(f.severity, "warning"),
+            "properties": {
+                "confidence": f.confidence.value if hasattr(f, "confidence") and hasattr(f.confidence, "value") else str(getattr(f, "confidence", "HIGH")),
+            },
             "message": {
                 "text": f"{f.title}: {f.description} (Remediation: {f.remediation})"
             },

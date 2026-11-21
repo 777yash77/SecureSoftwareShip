@@ -190,6 +190,15 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     {getSeverityBadge(finding.severity)}
+                    {finding.confidence && (
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                        finding.confidence === 'HIGH' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60' :
+                        finding.confidence === 'MEDIUM' ? 'bg-amber-950/60 text-amber-400 border-amber-800/60' :
+                        'bg-slate-800/60 text-slate-400 border-slate-700/60'
+                      }`}>
+                        {finding.confidence}
+                      </span>
+                    )}
                     <code className="text-xs text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/50 font-bold">
                       {finding.rule_id}
                     </code>

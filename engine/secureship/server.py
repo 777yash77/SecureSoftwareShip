@@ -95,6 +95,7 @@ def run_scan(request: ScanRequest) -> ScanResult:
             min_severity=request.min_severity,
             min_score=request.min_score,
             strict_categories=request.strict_categories,
+            min_confidence=request.min_confidence,
         )
         scan_history.insert(0, result)
         if len(scan_history) > 20:

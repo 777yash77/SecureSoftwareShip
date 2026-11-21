@@ -41,6 +41,8 @@ def render_console_report(result: ScanResult) -> None:
 
     sum_table.add_row("Security Score", f"[{status_color}]{summary.security_score} / 100[/]")
     sum_table.add_row("Passing Gate Threshold", f"{summary.min_score} / 100")
+    if summary.confidence_filter:
+        sum_table.add_row("Accuracy Gate Filter", f"[bold green]{summary.confidence_filter} Confidence Only[/]")
     if summary.strict_violations:
         sum_table.add_row("Strict Category Gate", f"[bold red]BLOCKED: {', '.join(summary.strict_violations)}[/]")
     sum_table.add_row("Ship-Readiness Verdict", f"[{status_color}]{summary.ship_status.value}[/]")
@@ -62,6 +64,7 @@ def render_console_report(result: ScanResult) -> None:
     # Findings Detail Table
     find_table = Table(title=f"Detailed Findings ({len(result.findings)})", show_header=True, header_style="bold blue")
     find_table.add_column("Severity", justify="center", style="bold", width=10)
+    find_table.add_column("Confidence", justify="center", width=12)
     find_table.add_column("Rule ID", style="cyan", width=14)
     find_table.add_column("Title & Description", style="white")
     find_table.add_column("Location", style="yellow")
@@ -73,15 +76,23 @@ def render_console_report(result: ScanResult) -> None:
         Severity.MEDIUM: "bold yellow",
         Severity.LOW: "bold cyan",
     }
+    conf_styles = {
+        "HIGH": "bold green",
+        "MEDIUM": "yellow",
+        "LOW": "dim cyan",
+    }
 
     for f in result.findings:
         sev_style = sev_styles.get(f.severity, "white")
+        conf_val = f.confidence.value if hasattr(f, "confidence") and hasattr(f.confidence, "value") else str(getattr(f, "confidence", "HIGH"))
+        conf_style = conf_styles.get(conf_val, "white")
         location = f"{f.file_path}:{f.line_start}"
         details = f"[bold]{f.title}[/]\n{f.description}\n[dim italic]Remediation: {f.remediation}[/]"
         cwe_owasp = f"{f.cwe_id}\n{f.owasp_category}"
 
         find_table.add_row(
             Text(f.severity.value, style=sev_style),
+            Text(conf_val, style=conf_style),
             f.rule_id,
             details,
             location,

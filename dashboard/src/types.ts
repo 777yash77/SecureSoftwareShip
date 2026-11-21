@@ -19,6 +19,7 @@ export interface Finding {
   description: string;
   remediation: string;
   auto_fix_hint?: string;
+  confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
 export interface ScanSummary {
