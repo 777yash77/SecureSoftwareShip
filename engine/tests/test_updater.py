@@ -40,8 +40,17 @@ def test_cli_update_help():
     assert "777yash77/SecureSoftwareShip" in res.output
 
 
-def test_cli_update_check_unauthenticated():
+def test_cli_update_check_unauthenticated(monkeypatch):
     """Verify update --check safely handles unauthenticated / private repos."""
+    monkeypatch.setattr(
+        "secureship.updater.fetch_latest_commit_info",
+        lambda *args, **kwargs: (
+            False,
+            None,
+            None,
+            "Repository is private or not found. A valid GitHub Personal Access Token is required.",
+        ),
+    )
     res = runner.invoke(cli_app, ["update", "--check"])
     assert res.exit_code == 1
     assert "SecureShip Self-Updater" in res.output

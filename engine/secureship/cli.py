@@ -392,6 +392,9 @@ def config(
     min_confidence: Optional[str] = typer.Option(
         None, "--min-confidence", "--accuracy", help="Configure minimum accuracy confidence level: high, medium, low"
     ),
+    global_cfg: bool = typer.Option(
+        False, "--global", "-g", help="Apply configuration globally across all repositories (~/.secureship/config.json)"
+    ),
     show: bool = typer.Option(False, "--show", "-s", help="Display current quality gate configuration"),
 ) -> None:
     """Configure or view repository quality gate rules (.secureshiprc)."""
@@ -400,8 +403,10 @@ def config(
 
     no_args = min_score is None and not strict_sca and not strict_iac and not strict_sec and not strict_sast and github_token is None and min_confidence is None
     if show or no_args:
-        cfg_file = target / ".secureshiprc"
-        typer.secho(f"\n⚙️  SecureShip Quality Gate Configuration ({cfg_file.name if cfg_file.exists() else 'defaults'}):", fg=typer.colors.CYAN, bold=True)
+        from secureship.config import find_config_file
+        cfg_file = find_config_file(target)
+        source_label = str(cfg_file) if cfg_file else "system defaults"
+        typer.secho(f"\n⚙️  SecureShip Quality Gate Configuration ({source_label}):", fg=typer.colors.CYAN, bold=True)
         typer.echo(f"   • Passing Score (min_score): {current_cfg.get('min_score', 80)} / 100")
         stricts = current_cfg.get("strict_categories", [])
         typer.echo(f"   • Strict Blocker Categories:  {', '.join(stricts) if stricts else 'None (default: Critical severity blocks)'}")
@@ -441,9 +446,9 @@ def config(
 
     updates["strict_categories"] = sorted(list(current_stricts))
     try:
-        saved_path = save_config(target, updates)
+        saved_path = save_config(target, updates, is_global=global_cfg)
     except Exception as e:
-        typer.secho(f"Error saving configuration to '{target}': {e}", fg=typer.colors.RED, err=True)
+        typer.secho(f"Error saving configuration: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
 
     typer.secho(f"\n✅ Updated SecureShip quality gate configuration in {saved_path}:", fg=typer.colors.GREEN, bold=True)
