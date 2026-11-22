@@ -24,6 +24,7 @@ dist/
 
 # Local SecureShip database & audit cache
 .secureship/
+.secureshiprc
 secureship.db
 *.token
 
