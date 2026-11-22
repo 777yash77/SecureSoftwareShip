@@ -1,6 +1,6 @@
 # 🛡️ SecureShip — Shift-Left DevSecOps Security Platform
 
-> **Comprehensive Shift-Left Security Platform:** Real-time VS Code Extension, Standalone CI/CD Gate CLI, and Interactive Dark-Theme Web Dashboard powered by a high-performance Python 3.11+ Core Engine.
+> **Developer-First Shift-Left Security Platform:** Real-time VS Code diagnostics, automated Git pre-commit and pre-push gates, standalone CI/CD CLI, and an interactive cybersecurity dashboard powered by a high-performance Python 3.10+ multi-threaded engine.
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -11,77 +11,91 @@
 ---
 
 ## 📑 Table of Contents
-- [Architecture & Tech Stack](#-architecture--tech-stack)
-- [How to Run on Any Computer (Including Another Person's Computer)](#-how-to-run-on-any-computer-including-another-persons-computer)
-  - [Method 1: 1-Click Portable Release Package (Recommended)](#method-1-1-click-portable-release-package-recommended)
-  - [How `install.bat` Works Behind the Scenes](#how-installbat-works-behind-the-scenes)
-  - [Manual Windows Environment Variables (PATH) Configuration](#manual-windows-environment-variables-path-configuration)
-  - [Installing the VS Code Extension (`.vsix`)](#installing-the-vs-code-extension-vsix)
-  - [Method 2: Developer Mode (From Git Source)](#method-2-developer-mode-from-git-source)
-- [How the Application Works (Engine Architecture & Deep Dive)](#-how-the-application-works-engine-architecture--deep-dive)
-  - [1. Multi-Threaded Parallel Scanning Engine](#1-multi-threaded-parallel-scanning-engine)
-  - [2. 4-Tier Security Detection Modules](#2-4-tier-security-detection-modules)
-  - [3. High-Accuracy Confidence Scoring & False-Positive Elimination](#3-high-accuracy-confidence-scoring--false-positive-elimination)
-  - [4. Security Scoring & Ship-Readiness Gate (0–100)](#4-security-scoring--ship-readiness-gate-0100)
-  - [5. Automated Shift-Left Git Pre-Commit & Pre-Push Gates](#5-automated-shift-left-git-pre-commit--pre-push-gates)
-  - [6. Persistent SQLite Audit Storage & Trend Tracking](#6-persistent-sqlite-audit-storage--trend-tracking)
-  - [7. AI & Expert DevSecOps Security Advisor](#7-ai--expert-devsecops-security-advisor)
-  - [8. Multi-Format Reporting & Executive Audit Certificates](#8-multi-format-reporting--executive-audit-certificates)
-  - [9. Automated GitHub Self-Updater (Public & Private Repos)](#9-automated-github-self-updater-public--private-repos)
-- [Complete CLI Command Reference](#-complete-cli-command-reference)
-- [VS Code Extension Features & Quick Fixes](#-vs-code-extension-features--quick-fixes)
-- [Web Security Dashboard](#-web-security-dashboard)
-- [Demo Vulnerable App Verification Matrix](#-demo-vulnerable-app-verification-matrix)
-- [Automated Tests & Quality Assurance](#-automated-tests--quality-assurance)
+- [Why SecureShip?](#-why-secureship)
+- [System Architecture](#-system-architecture)
+- [Installation & Quick Start](#-installation--quick-start)
+  - [1. Quick Portable Installation (Release Package)](#1-quick-portable-installation-release-package)
+  - [2. Manual Environment Variables (PATH) Setup](#2-manual-environment-variables-path-setup)
+  - [3. Installing the VS Code Extension](#3-installing-the-vs-code-extension)
+  - [4. Developer Setup (From Source Repository)](#4-developer-setup-from-source-repository)
+- [Core Engine Mechanics & How It Works](#-core-engine-mechanics--how-it-works)
+  - [Recursive Tree Traversal & Parallel Worker Pool](#recursive-tree-traversal--parallel-worker-pool)
+  - [AST-Level SQL Injection Detection & Remediation](#ast-level-sql-injection-detection--remediation)
+  - [4-Tier Security Inspection Domains (35+ Rules)](#4-tier-security-inspection-domains-35-rules)
+  - [High-Accuracy Confidence & False-Positive Elimination](#high-accuracy-confidence--false-positive-elimination)
+  - [Objective Security Scoring (0–100) & Gate Verdicts](#objective-security-scoring-0100--gate-verdicts)
+  - [Custom Quality Gates & Strict Zero-Tolerance Policies](#custom-quality-gates--strict-zero-tolerance-policies)
+  - [Automated Shift-Left Git Pre-Commit & Pre-Push Gates](#automated-shift-left-git-pre-commit--pre-push-gates)
+  - [Audited Emergency Production Bypass](#audited-emergency-production-bypass)
+  - [Persistent SQLite Scan History](#persistent-sqlite-scan-history)
+  - [Exploit Intelligence & Patch Guidance Engine](#exploit-intelligence--patch-guidance-engine)
+  - [Multi-Format Reporting & Executive Ship Certificates](#multi-format-reporting--executive-ship-certificates)
+  - [Seamless Self-Updating from GitHub](#seamless-self-updating-from-github)
+- [CLI Reference Manual](#-cli-reference-manual)
+- [VS Code IDE Integration](#-vs-code-ide-integration)
+- [Interactive Cybersecurity Dashboard](#-interactive-cybersecurity-dashboard)
+- [Vulnerability Verification Matrix](#-vulnerability-verification-matrix)
+- [Testing & Quality Assurance](#-testing--quality-assurance)
+- [License](#-license)
 
 ---
 
-## 🏛️ Architecture & Tech Stack
+## 💡 Why SecureShip?
 
-SecureShip implements a unified scanning model where the **Core Python Engine** acts as the single source of truth across all developer touchpoints: terminal CLI, Git pre-commit & pre-push hooks, automated CI/CD pipelines, VS Code IDE extension, and the interactive Web Dashboard.
+Modern engineering velocity demands that security checks happen *before* code leaves developer machines. Traditional scanners are slow, cloud-dependent, noisy with false positives, and detached from the day-to-day coding workflow.
+
+We engineered **SecureShip** as an offline-capable, developer-centric DevSecOps gate that:
+- **Recursively analyzes whole codebases**: Walks every directory, nested subfolder, and file down the full folder tree in sub-second times.
+- **Understands real code syntax via AST**: Evaluates Python Abstract Syntax Trees and JavaScript syntax structures to identify real vulnerabilities (like SQL injection, command injection, and deserialization) while ignoring harmless static string literals.
+- **Blocks bad code at the Git gate**: Integrates seamlessly with `git commit` and `git push`, halting high-risk commits before they reach remote repositories.
+- **Protects credentials with Shannon entropy**: Detects leaked API keys, database connection strings, and cloud tokens with high mathematical accuracy.
+- **Provides instant copy-paste patches**: Explains the exact exploitation scenario and delivers defensive remediation code on demand.
+
+---
+
+## 🏛️ System Architecture
+
+SecureShip operates around a unified Python core engine that serves as the single source of truth for the terminal CLI, Git hooks, VS Code extension, and Web Dashboard.
 
 ```mermaid
 flowchart TD
-    subgraph ClientInterfaces ["Shift-Left Developer Interfaces"]
-        IDE["VS Code Extension\n(TypeScript API + Diagnostics)"]
-        CLI["SecureShip CLI / Git Gate\n(Typer + Rich Engine)"]
-        DASH["Web Security Dashboard\n(React 18 + Vite + Tailwind)"]
+    subgraph Interfaces ["Developer Interfaces"]
+        IDE["VS Code Extension\n(Real-time Diagnostics & Quick Fixes)"]
+        GIT["Git Shift-Left Gates\n(pre-commit & pre-push hooks)"]
+        CLI["Terminal CLI\n(secureship scan, config, update)"]
+        DASH["Web Dashboard\n(React 18 + Vite + Tailwind CSS)"]
     end
 
-    subgraph ServiceLayer ["API & Service Layer"]
-        API["FastAPI Local REST Service\n(http://127.0.0.1:8787)"]
+    subgraph ServiceLayer ["Service Layer"]
+        API["FastAPI REST Service\n(http://127.0.0.1:8787)"]
     end
 
-    subgraph CoreEngine ["SecureShip Engine (Python 3.10+)"]
-        ORCH["Multi-Threaded Scanner Orchestrator\n(ThreadPoolExecutor)"]
-        SCORER["Security Scoring & Quality Gate\n(0-100 Score | READY / REVIEW / BLOCKED)"]
-        CONF["Confidence & False-Positive Filter\n(High / Medium / Low Accuracy)"]
-        SQLITE[("Persistent History DB\n(~/.secureship/history.db)")]
-        ADVISOR["AI / DevSecOps Advisor\n(Exploit Analysis & Patches)"]
+    subgraph CoreEngine ["SecureShip Core Engine (Python 3.10+)"]
+        ORCH["Parallel Orchestrator\n(ThreadPoolExecutor)"]
+        SCORER["Scoring & Quality Gate Algorithm\n(0–100 Score | READY / REVIEW / BLOCKED)"]
+        CONF["Confidence & False-Positive Filter\n(High / Medium / Low)"]
+        SQLITE[("SQLite Audit Store\n(~/.secureship/history.db)")]
+        ADVISOR["Exploit Intelligence Engine\n(Adversary Scenarios & Patches)"]
 
-        subgraph ModularScanners ["4 Core Security Domains (35+ Rules)"]
-            S1["Secrets & Credentials\n(Entropy + Pattern Matcher)"]
-            S2["SAST Code Analysis\n(Python AST + JS/Node Engine)"]
+        subgraph ModularScanners ["4 Security Inspection Domains (35+ Rules)"]
+            S1["Secrets & Tokens\n(Shannon Entropy + Pattern Matchers)"]
+            S2["SAST Code Analysis\n(Python AST + JS/Node AST)"]
             S3["Dependency / SCA\n(OSV.dev Batch API + Offline CVE DB)"]
-            S4["Container & IaC\n(Dockerfile, Compose, K8s)"]
+            S4["Container & IaC\n(Dockerfile, Compose, Kubernetes)"]
         end
-    end
-
-    subgraph Targets ["Target Project / Repository"]
-        CODE["Target Files & Manifests\n(Python, JS/TS, Docker, K8s, package.json, requirements.txt, .env)"]
     end
 
     IDE -->|"HTTP /api/scan/content"| API
     DASH -->|"HTTP /api/scans & /api/history"| API
-    CLI -->|"Direct Execution"| ORCH
-    API -->|"Direct Execution"| ORCH
+    GIT -->|"CLI Execution"| CLI
+    CLI -->|"Direct Internal Call"| ORCH
+    API -->|"Direct Internal Call"| ORCH
 
     ORCH --> S1
     ORCH --> S2
     ORCH --> S3
     ORCH --> S4
 
-    ModularScanners --> CODE
     ModularScanners --> CONF
     CONF --> SCORER
     SCORER --> SQLITE
@@ -91,106 +105,82 @@ flowchart TD
 
 ---
 
-## 🚀 How to Run on Any Computer (Including Another Person's Computer)
+## 📦 Installation & Quick Start
 
-### Method 1: 1-Click Portable Release Package (Recommended)
+### 1. Quick Portable Installation (Release Package)
 
-You can share SecureShip as a single compressed zip file: `SecureShip-v1.0.0-release.zip`. The code inside the package is **protected and compiled into optimized Python bytecode (`.pyc`)**, with all raw source `.py` files removed.
+We package SecureShip as a standalone portable release archive: `SecureShip-v1.0.0-release.zip`. The code is pre-compiled into optimized Python bytecode (`.pyc`) with raw `.py` sources omitted to protect intellectual property.
 
-#### Step 1: Send the Zip
-Share `SecureShip-v1.0.0-release.zip` with any user.
-
-#### Step 2: Extract Anywhere
-The user extracts `SecureShip-v1.0.0-release.zip` to any folder on their computer (e.g. `C:\SecureShip` or `C:\Users\<Name>\SecureShip`).
-
-#### Step 3: Run the 1-Click Installer
-Inside the extracted folder:
-- **Windows Command Prompt (CMD):** Double-click `install.bat`.
-- **Windows PowerShell:** Right-click `setup.ps1` -> **Run with PowerShell** (or run `powershell -ExecutionPolicy Bypass -File .\setup.ps1`).
-
-#### Step 4: Verify from Any Terminal
-Open a **new** Command Prompt or PowerShell window anywhere and run:
-```bash
-secureship --help
-```
-You are ready to scan!
-
----
-
-### How `install.bat` Works Behind the Scenes
-
-The `install.bat` script handles the entire machine setup automatically:
-
-1. **Python Detection:** Scans the target computer for active Python installations in `%PATH%`, checking standard locations:
-   - Python in system `PATH`
-   - `%USERPROFILE%\Python311\python.exe`
-   - `%LOCALAPPDATA%\Programs\Python\Python311\python.exe`
-   - Windows Python Launcher (`py.exe -3`)
-2. **Dependency Resolution:** Installs required runtime dependencies (`typer`, `rich`, `pydantic`, `fastapi`, `uvicorn`, `httpx`, `pyyaml`) silently into the user's Python environment.
-3. **Environment Variable Registration:** Dynamically resolves the absolute path of the `bin\` folder and uses `setx PATH "%PATH%;<bin_path>"` (or registry modification) to add `bin\` and the Python Scripts directory to the user's permanent **User Environment Variables (`PATH`)**.
-4. **Instant Terminal Access:** Creates `secureship.cmd` and `secureship.ps1` runners so running `secureship` works seamlessly in both `cmd.exe` and `powershell.exe`.
-
----
-
-### Manual Windows Environment Variables (PATH) Configuration
-
-If the user prefers to add the `bin` directory to their environment variables manually:
-
-1. Extract the release zip to a permanent location (e.g. `C:\SecureShip`).
-2. Press <kbd>Win</kbd> + <kbd>R</kbd>, type `sysdm.cpl`, and hit <kbd>Enter</kbd>.
-3. In the **System Properties** dialog, switch to the **Advanced** tab and click **Environment Variables...**.
-4. In the top section (**User variables for &lt;YourUsername&gt;**), select the `Path` variable and click **Edit...**.
-5. Click **New**, paste the absolute path to the `bin` folder:
-   ```text
-   C:\SecureShip\bin
-   ```
-6. Click **OK** on all dialogs to save.
-7. Open a **new** Command Prompt or PowerShell terminal and run:
+1. Download and extract `SecureShip-v1.0.0-release.zip` into any directory on your computer (e.g. `C:\SecureShip`).
+2. Run our automated setup script:
+   - **Windows Command Prompt:** Double-click `install.bat`.
+   - **PowerShell:** Right-click `setup.ps1` $\rightarrow$ **Run with PowerShell** (or run `powershell -ExecutionPolicy Bypass -File .\setup.ps1`).
+3. Open a **new** terminal window and verify:
    ```bash
+   secureship --help
    secureship version
    ```
 
+#### What `install.bat` Does Under the Hood:
+- Automatically detects Python installations in your system `PATH`, `%USERPROFILE%\Python311`, `%LOCALAPPDATA%`, or the Windows Python Launcher (`py.exe`).
+- Installs necessary engine runtime dependencies (`typer`, `rich`, `pydantic`, `fastapi`, `uvicorn`, `httpx`, `pyyaml`).
+- Registers `bin\` and the Python Scripts directory into your **Windows User Environment Variables (`PATH`)** so `secureship` is instantly available anywhere.
+
 ---
 
-### Installing the VS Code Extension (`.vsix`)
+### 2. Manual Environment Variables (PATH) Setup
 
-The portable release package includes the compiled VS Code extension: `secureship-vscode-1.0.0.vsix`.
+If you prefer to configure your environment variables manually:
+1. Extract the release folder to your preferred destination (e.g. `C:\SecureShip`).
+2. Press <kbd>Win</kbd> + <kbd>R</kbd>, type `sysdm.cpl`, and hit <kbd>Enter</kbd>.
+3. In **System Properties**, open the **Advanced** tab and click **Environment Variables...**.
+4. In **User variables**, select `Path` and click **Edit...**.
+5. Click **New** and add the path to the `bin` directory:
+   ```text
+   C:\SecureShip\bin
+   ```
+6. Click **OK** on all open dialogs.
+7. Open a new terminal and run `secureship --help`.
 
-#### Option A: Via VS Code User Interface (Recommended)
+---
+
+### 3. Installing the VS Code Extension
+
+The release package includes the compiled extension package: `secureship-vscode-1.0.0.vsix`.
+
+#### Via VS Code GUI:
 1. Open **Visual Studio Code**.
-2. Click the **Extensions** icon on the left sidebar (<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>X</kbd>).
-3. Click the **`...` (Views and More Actions)** button at the top-right of the Extensions pane.
+2. Go to **Extensions** (<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>X</kbd>).
+3. Click the **`...` (Views and More Actions)** button at the top-right corner of the Extensions pane.
 4. Select **"Install from VSIX..."**.
-5. Browse to the extracted folder, select `secureship-vscode-1.0.0.vsix`, and click **Install**.
-6. A notification will appear: *"Completed installing SecureShip extension from VSIX"*.
+5. Select `secureship-vscode-1.0.0.vsix` and click **Install**.
 
-#### Option B: Via Command Prompt / PowerShell
-Run:
+#### Via Terminal:
 ```bash
 code --install-extension secureship-vscode-1.0.0.vsix
 ```
 
 ---
 
-### Method 2: Developer Mode (From Git Source)
+### 4. Developer Setup (From Source Repository)
 
-If you are developing or contributing to SecureShip directly:
+To contribute or run from source:
 
 ```bash
-# 1. Clone the repository
+# Clone the repository
 git clone https://github.com/777yash77/SecureSoftwareShip.git
 cd SecureSoftwareShip
 
-# 2. Install Core Engine in editable mode
+# Install the Python engine in editable mode
 cd engine
 pip install -e .
 
-# 3. Build & run Web Dashboard
+# Launch Web Dashboard
 cd ../dashboard
 npm install
 npm run dev
 
-# 4. Compile VS Code Extension
+# Compile VS Code Extension
 cd ../vscode-extension
 npm install
 npm run compile
@@ -198,126 +188,154 @@ npm run compile
 
 ---
 
-## ⚙️ How the Application Works (Engine Architecture & Deep Dive)
+## ⚙️ Core Engine Mechanics & How It Works
 
-SecureShip operates on an objective, deterministic DevSecOps evaluation model built on 9 core architectural pillars:
-
-### 1. Multi-Threaded Parallel Scanning Engine
-- Files inside the target directory are collected while respecting `.gitignore` and `.secureshipignore`.
-- Scans execute in parallel across a thread pool:
+### Recursive Tree Traversal & Parallel Worker Pool
+SecureShip does not limit inspection to the top-level folder. When scanning a project:
+- Uses `os.walk()` to recursively discover all directories, subfolders, and source files across the entire file tree.
+- Automatically respects `.gitignore` and `.secureshipignore` patterns, ignoring build artifacts, virtual environments (`.venv/`, `env/`), `node_modules/`, and Git metadata.
+- Distributes files across a multi-threaded worker pool:
   $$\text{max\_workers} = \min(32, \max(4, \text{cpu\_count} \times 2))$$
-- Bypasses large binary assets (> 5MB) and inspects initial byte headers for null bytes (`\x00`) to prevent corrupting text scanners, achieving sub-second scans on large repositories.
+- Performs binary inspection on initial byte headers to skip non-text assets (> 5MB or containing `\x00` null bytes), keeping scan times below a second even on extensive codebases.
 
 ---
 
-### 2. 4-Tier Security Detection Modules
+### AST-Level SQL Injection Detection & Remediation
 
-SecureShip inspects 4 independent security domains with over **35+ specialized detection rules**:
+SQL Injection (`SAST-PY-001`, `SAST-JS-003`) is one of the most critical web vulnerabilities (CWE-89 / OWASP A03:2021). SecureShip detects it with high precision using compiler Abstract Syntax Tree analysis:
 
-#### Domain A: Secrets & Credentials (`secrets_scanner.py`)
+#### 1. Python AST Parser
+Instead of relying on naive regular expressions that miss context, our scanner inspects Python AST nodes (`ast.Call`) invoking `execute()`:
+- **f-strings (`ast.JoinedStr`)**:
+  ```python
+  # FLAGGED (Critical):
+  cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")
+  ```
+- **Modulo string formatting (`ast.BinOp` with `Mod`)**:
+  ```python
+  # FLAGGED (Critical):
+  cursor.execute("SELECT * FROM users WHERE id = %s" % user_id)
+  ```
+- **`.format()` method calls (`ast.Call`)**:
+  ```python
+  # FLAGGED (Critical):
+  cursor.execute("SELECT * FROM users WHERE id = {}".format(user_id))
+  ```
+- **Dynamic string concatenation (`ast.BinOp` with `Add`)**:
+  ```python
+  # FLAGGED (Critical):
+  cursor.execute("SELECT * FROM users WHERE id = " + user_id)
+  ```
+- **AST Constant Propagation**: Static literals (e.g. `cursor.execute("SELECT 1")` or `cursor.execute("SELECT * FROM users WHERE role = 'admin'")`) are recognized as immutable constants and are **never** flagged, eliminating false positives.
+
+#### 2. JavaScript / TypeScript Detection
+Detects string concatenation and ES6 template literals inside database calls:
+```javascript
+// FLAGGED (Critical):
+db.query(`SELECT * FROM users WHERE id = ${userId}`);
+client.query("SELECT * FROM users WHERE id = " + userId);
+```
+
+#### 3. Automatic Remediation Guidance
+Every finding reports the exact line number, code snippet, and parameterized replacement:
+```python
+# SecureShip Remediation:
+cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+```
+
+---
+
+### 4-Tier Security Inspection Domains (35+ Rules)
+
+SecureShip audits code across 4 specialized security vectors:
+
+#### Domain 1: Secrets & Credentials (`secrets_scanner.py`)
 - **Shannon Entropy Analysis**:
   $$H(X) = -\sum_{i=1}^{n} P(x_i) \log_2 P(x_i)$$
-  Identifies high-randomness string literals ($H > 3.2$) representing API tokens, credentials, and cryptographic keys.
-- **Rules Covered**:
+  Calculates character entropy to identify high-randomness tokens ($H > 3.2$).
+- **Rules**:
   - `SEC-000`: Tracked `.env` files exposing production credentials.
   - `SEC-001`: AWS Access Key IDs (`AKIA[0-9A-Z]{16}`).
   - `SEC-002`: GitHub Personal Access Tokens (`ghp_[a-zA-Z0-9]{36}`).
-  - `SEC-003`: Generic high-entropy secret tokens.
-  - `SEC-004`: Plaintext RSA, OpenSSH, or EC Private Keys.
+  - `SEC-003`: Generic high-entropy secret tokens and API keys.
+  - `SEC-004`: Plaintext RSA, OpenSSH, and EC Private Keys.
   - `SEC-005`: Database connection URIs containing credentials (`postgres://user:pass@host`).
-  - `SEC-007`: AI Platform API keys (OpenAI `sk-proj-`, Anthropic `sk-ant-`, HuggingFace `hf_`).
-  - `SEC-008`: Slack Incoming Webhook URLs (`https://hooks.slack.com/services/...`).
+  - `SEC-007`: AI Platform keys (OpenAI `sk-proj-`, Anthropic `sk-ant-`, HuggingFace `hf_`).
+  - `SEC-008`: Exposed Slack Incoming Webhook URLs.
   - `SEC-009`: Stripe live secret keys (`sk_live_[0-9a-zA-Z]{24,}`).
   - `SEC-010`: Google Cloud & Firebase API keys (`AIza[0-9A-Za-z\\-_]{35}`).
-  - `SEC-011`: Plaintext hardcoded passwords in variable assignments (`password = "..."`).
+  - `SEC-011`: Plaintext hardcoded passwords in variable assignments.
 
-#### Domain B: Static Application Security Testing — SAST (`sast_scanner.py`)
-- **Python AST Engine**: Parses code directly into Abstract Syntax Trees.
-  - AST Constant Propagation: Differentiates static queries (`execute("SELECT 1")`) from dynamic variable interpolations (`execute(f"SELECT * FROM users WHERE id = {user_id}")`).
-  - `SAST-PY-001`: SQL Injection via dynamic f-strings, `.format()`, or `%` formatting.
+#### Domain 2: Static Application Security Testing — SAST (`sast_scanner.py`)
+- **Python**:
+  - `SAST-PY-001`: SQL Injection via dynamic formatting in `execute()`.
   - `SAST-PY-002`: Command Injection via `os.system()` with dynamic input.
   - `SAST-PY-003`: Command Injection via `subprocess` with `shell=True`.
-  - `SAST-PY-004`: Remote Code Execution via `pickle.loads()` deserialization.
+  - `SAST-PY-004`: Insecure Deserialization via `pickle.loads()`.
   - `SAST-PY-005`: Insecure YAML deserialization via `yaml.load()` without SafeLoader.
   - `SAST-PY-006`: Dynamic arbitrary code execution via `eval()` or `exec()`.
   - `SAST-PY-007`: Broken cryptographic hashes (`hashlib.md5`, `hashlib.sha1`).
   - `SAST-PY-008`: Production debug mode enabled (`DEBUG = True`).
   - `SAST-PY-009`: Service bound to all interfaces (`0.0.0.0`).
-  - `SAST-PY-010`: Server-Side Request Forgery (SSRF) via dynamic `requests` or `httpx` URLs.
+  - `SAST-PY-010`: Server-Side Request Forgery (SSRF) via dynamic `requests`/`httpx` URLs.
   - `SAST-PY-011`: Path Traversal / Arbitrary File Read in `open()` or `send_file()`.
   - `SAST-PY-012`: Insecure Deserialization via `marshal` or `shelve`.
   - `SAST-PY-014`: Insecure XML parsing vulnerable to XML External Entity (XXE).
-- **JavaScript & Node.js Engine**:
+- **JavaScript & Node.js**:
   - `SAST-JS-001`: Code execution via `eval()`.
-  - `SAST-JS-002`: Cross-Site Scripting (XSS) via `innerHTML` or `dangerouslySetInnerHTML`.
+  - `SAST-JS-002`: Cross-Site Scripting (XSS) in `innerHTML` or `dangerouslySetInnerHTML`.
   - `SAST-JS-003`: SQL Injection via string concatenation in `query()`.
   - `SAST-JS-004`: Command Injection via `child_process.exec()`.
   - `SAST-JS-005`: Disabled TLS verification (`rejectUnauthorized: false`).
-  - `SAST-JS-006`: Hardcoded JWT signing secret in `jwt.sign()`.
-  - `SAST-JS-007`: Server-Side Request Forgery (SSRF) via `axios`/`fetch` with dynamic URLs.
+  - `SAST-JS-006`: Hardcoded JWT secret key in `jwt.sign()`.
+  - `SAST-JS-007`: Server-Side Request Forgery (SSRF) via dynamic `axios`/`fetch` URLs.
   - `SAST-JS-008`: Path Traversal / Arbitrary File Read in `fs.readFile()`.
   - `SAST-JS-009`: Prototype Pollution via unconstrained `Object.assign` or deep merge.
   - `SAST-JS-010`: Permissive Wildcard CORS configuration (`origin: '*'`).
   - `SAST-JS-011`: Insecure Cookies missing `httpOnly` or `secure` flags.
 
-#### Domain C: Dependency / Software Composition Analysis — SCA (`sca_scanner.py`)
+#### Domain 3: Dependency / Software Composition Analysis — SCA (`sca_scanner.py`)
 - Analyzes `package.json`, `requirements.txt`, and `pom.xml`.
-- Queries the **OSV.dev batch API** (`https://api.osv.dev/v1/querybatch`) for up-to-date CVE records.
-- Includes a **built-in offline CVE database** so dependency scanning functions reliably in isolated, air-gapped environments without internet access:
-  - `CVE-2021-44228`: Log4j RCE (Log4Shell) in `log4j-core < 2.15.0`.
-  - `CVE-2022-22965`: Spring Framework RCE (Spring4Shell) in `spring-beans < 5.3.18`.
+- Queries the **OSV.dev batch API** and includes a **built-in offline CVE database** covering critical CVEs:
+  - `CVE-2021-44228`: Log4Shell RCE in `log4j-core < 2.15.0`.
+  - `CVE-2022-22965`: Spring4Shell RCE in `spring-beans < 5.3.18`.
   - `CVE-2020-8203`: Lodash Prototype Pollution in `lodash < 4.17.21`.
-  - `CVE-2022-23529`: Remote Code Execution in `jsonwebtoken < 9.0.0`.
+  - `CVE-2022-23529`: RCE in `jsonwebtoken < 9.0.0`.
   - `CVE-2024-34064`: HTML Attribute Injection in `jinja2 < 3.1.4`.
   - `CVE-2024-34069`: Predictable Debugger PIN in `werkzeug < 3.0.3`.
   - `CVE-2023-50447`: Arbitrary Code Execution in `pillow < 10.0.1`.
   - `CVE-2023-38325`: Timing attack in `cryptography < 41.0.2`.
   - `CVE-2023-48795`: Terrapin SSH attack in `paramiko < 3.4.0`.
 
-#### Domain D: Container & IaC Security (`iac_scanner.py`)
-- **Dockerfile**:
-  - `IAC-DOCKER-001`: Container executing as root (missing `USER` directive).
-  - `IAC-DOCKER-002`: Unpinned base image tag (`:latest` or untagged).
-  - `IAC-DOCKER-003`: Embedded secrets in `ENV` or `ARG` directives.
-  - `IAC-DOCKER-004`: Dangerous `ADD` instruction instead of `COPY`.
-  - `IAC-DOCKER-005`: Insecure pipe from `curl`/`wget` to shell (`curl ... | sh`).
-- **Docker Compose**:
-  - `IAC-COMPOSE-001`: Service running with `privileged: true` (host takeover risk).
-  - `IAC-COMPOSE-002`: Sensitive database ports (`5432`, `3306`, `6379`, `27017`) exposed to `0.0.0.0`.
-  - `IAC-COMPOSE-003`: Docker daemon socket (`/var/run/docker.sock`) mounted inside container.
-  - `IAC-COMPOSE-004`: Host Network Mode (`network_mode: 'host'`) enabled.
-- **Kubernetes Manifests**:
-  - `IAC-K8S-001`: Pod containers missing CPU or Memory resource limits (DoS risk).
-  - `IAC-K8S-002`: Pod running with privileged `securityContext`.
-  - `IAC-K8S-003`: Container allows privilege escalation (`allowPrivilegeEscalation: true`).
-  - `IAC-K8S-004`: Container root filesystem is writable (`readOnlyRootFilesystem: false`).
+#### Domain 4: Container & IaC Security (`iac_scanner.py`)
+- **Dockerfile**: Checks for execution as `root` (missing `USER`), unpinned base image tags (`:latest`), embedded secrets in `ENV`/`ARG`, dangerous `ADD` instructions, and insecure `curl ... | sh` commands.
+- **Docker Compose**: Identifies `privileged: true` containers, open database ports (`5432`, `3306`, `6379`) bound to `0.0.0.0`, `/var/run/docker.sock` socket mounts, and `host` network mode.
+- **Kubernetes Manifests**: Detects missing CPU/Memory limits, privileged `securityContext`, `allowPrivilegeEscalation: true`, and writable root filesystems.
 
 ---
 
-### 3. High-Accuracy Confidence Scoring & False-Positive Elimination
+### High-Accuracy Confidence & False-Positive Elimination
 
-Every finding is tagged with an accuracy `Confidence`:
-- **`HIGH`**: Definitive pattern match with zero ambiguity (e.g. valid AWS key format, unpinned Docker tag, AST f-string in SQL).
-- **`MEDIUM`**: Heuristic pattern match (e.g. unknown API token with high entropy).
+Every finding is tagged with an accuracy rating:
+- **`HIGH`**: Definitive pattern match (e.g. AWS key prefix, unpinned Docker tag, AST f-string in SQL).
+- **`MEDIUM`**: Heuristic pattern match (e.g. high-entropy unknown token).
 - **`LOW`**: Informational warning.
 
-#### Eliminating False Positives
-SecureShip uses contextual heuristics to exclude noise:
-- GUIDs (`12345678-1234-1234-1234-123456789abc`) and SHA-256 hashes are automatically detected and suppressed from Secrets scanning.
-- Documentation placeholders (`example.com`, `placeholder`, `changeme`, `dummy_token`, `your_api_key`) are excluded.
-- Static queries inside `execute()` without string interpolation are recognized as safe by AST constant folding.
-- To run zero-false-positive audits:
+#### Built-in False-Positive Filters
+- Automatically filters out GUIDs (`12345678-1234-1234-1234-123456789abc`) and SHA-256 digests.
+- Ignores documentation placeholders (`example.com`, `placeholder`, `changeme`, `dummy_key`).
+- Use the high-accuracy filter for zero-noise audits:
   ```bash
   secureship scan --confidence high
   ```
 
 ---
 
-### 4. Security Scoring & Ship-Readiness Gate (0–100)
+### Objective Security Scoring (0–100) & Gate Verdicts
 
-The Security Score starts at **100 points** and subtracts weighted penalties based on verified severity:
+The Security Score starts at **100 points** and subtracts weighted penalties based on findings:
 
-$$\text{Security Score} = \max\left(0, 100 - \sum \text{Severity Deductions}\right)$$
+$$\text{Security Score} = \max\left(0, 100 - \sum \text{Penalties}\right)$$
 
 | Severity | Weight | Deduction per Finding |
 | :--- | :---: | :---: |
@@ -327,24 +345,28 @@ $$\text{Security Score} = \max\left(0, 100 - \sum \text{Severity Deductions}\rig
 | **LOW** | 1 | **-2 points** |
 
 #### Ship-Readiness Verdicts
-- <span style="color:#10b981;font-weight:bold;">READY TO SHIP</span>: Score $\ge \text{threshold}$ (default: 80) **AND** 0 Critical findings.
-- <span style="color:#f59e0b;font-weight:bold;">NEEDS REVIEW</span>: Score is between 50 and 79 **AND** 0 Critical findings.
-- <span style="color:#ef4444;font-weight:bold;">BLOCKED</span>: Score $< 50$ **OR** $\ge 1$ Critical finding detected.
+- <span style="color:#10b981;font-weight:bold;">READY TO SHIP</span>: Score $\ge \text{threshold}$ (default: 80) **AND** 0 Critical issues.
+- <span style="color:#f59e0b;font-weight:bold;">NEEDS REVIEW</span>: Score between 50 and 79 **AND** 0 Critical issues.
+- <span style="color:#ef4444;font-weight:bold;">BLOCKED</span>: Score $< 50$ **OR** $\ge 1$ Critical issue detected.
 
-#### User-Level Score Customization (`--modify-score`)
-Teams can adjust the passing threshold to match their staging phase:
+---
+
+### Custom Quality Gates & Strict Zero-Tolerance Policies
+
+#### Adjusting Passing Thresholds (`--modify-score`)
+Customize the required gate score to match project milestones:
 ```bash
 # Allow any score >= 65% to pass
 secureship scan --modify-score 65
 
-# Accepts percentages with '%' symbol
+# Supports percentages with '%' symbol
 secureship scan --modify-score 70%
 ```
 
-#### Strict Zero-Tolerance Category Policies
-Enforce a hard blocker on specific categories regardless of overall score:
+#### Enforcing Strict Category Blockers
+Block releases if a specific category has even a single finding, regardless of the overall score:
 ```bash
-# Block push if ANY dependency vulnerability exists (even with score 99/100)
+# Block push if ANY dependency vulnerability exists (even with a 99/100 score)
 secureship scan --strict-sca
 
 # Block push if ANY Docker/K8s misconfiguration exists
@@ -357,113 +379,121 @@ secureship scan --strict-sec
 secureship scan --strict-sast
 ```
 
+#### Persisting Repository Policy (`.secureshiprc`)
+Save settings into `.secureshiprc` so every developer and CI runner follows the same rules:
+```bash
+secureship config --min-score 70 --strict-sca --min-confidence high
+secureship config --show
+```
+
 ---
 
-### 5. Automated Shift-Left Git Pre-Commit & Pre-Push Gates
+### Automated Shift-Left Git Pre-Commit & Pre-Push Gates
 
-SecureShip installs native Git security gates into your repository with one command:
+Install native Git security gates with one command:
 ```bash
 secureship install-hook
 ```
 
-#### Gate 1: Git Pre-Commit Hook (`.git/hooks/pre-commit`)
-- Triggers automatically when a developer runs `git commit`.
-- Fast diff mode (`--staged`): Scans **only lines added or modified** in the Git index.
-- Rejects the commit immediately if high-severity code flaws or secrets are detected.
+#### 1. Pre-Commit Hook (`.git/hooks/pre-commit`)
+- Triggers automatically when running `git commit`.
+- Scans only staged lines (`--staged`). If secrets or critical flaws are detected in staged files, the commit is rejected immediately.
 
-#### Gate 2: Git Pre-Push Hook (`.git/hooks/pre-push`)
-- Triggers automatically when a developer runs `git push`.
-- Audits the entire project against repository quality gate policies.
-- Blocks the push if the Ship-Readiness verdict is **BLOCKED** or strict category violations exist.
-
-#### Audited Emergency Bypass (`secureship bypass --push`)
-In production emergency situations, authorized engineers can bypass the gate:
-```bash
-secureship bypass --push --reason "Hotfix for production outage #1042"
-```
-SecureShip logs the timestamp, reason, and username to `.git/secureship-bypass.token`, allows the push, and immediately revokes the token.
+#### 2. Pre-Push Hook (`.git/hooks/pre-push`)
+- Triggers automatically when running `git push`.
+- Audits the entire codebase against repository gate policies. If the verdict is **BLOCKED** or strict category violations exist, the push to remote is blocked.
 
 ---
 
-### 6. Persistent SQLite Audit Storage & Trend Tracking
+### Audited Emergency Production Bypass
 
-Every scan is recorded in a local SQLite database (`~/.secureship/history.db`).
-- Tracks timestamps, scanned targets, scores, findings breakdowns, and ship verdicts.
-- Wrapped in safe database transactions so SQLite operations never crash scans.
-- View history anytime:
+When a critical production hotfix must be deployed immediately:
+```bash
+secureship bypass --push --reason "Hotfix for production database outage #104"
+```
+SecureShip records the developer username, timestamp, and audit justification in `.git/secureship-bypass.token`, allows the push, and immediately invalidates the token.
+
+---
+
+### Persistent SQLite Scan History
+
+Every scan records its metrics in a local SQLite database (`~/.secureship/history.db`).
+- Tracks timestamps, target paths, scores, findings counts, and gate verdicts.
+- Wrapped in safe database transactions so SQLite issues never break scans.
+- Query scan trajectories anytime:
   ```bash
   secureship history --limit 5
   ```
 
 ---
 
-### 7. AI & Expert DevSecOps Security Advisor
+### Exploit Intelligence & Patch Guidance Engine
 
-SecureShip includes built-in exploit intelligence for every rule ID:
+Run `secureship explain <RULE_ID>` to inspect any rule:
 ```bash
 secureship explain SAST-PY-001
 secureship explain SEC-007
 secureship explain IAC-DOCKER-001
 ```
 Renders 3 structured analysis panels:
-1. **Vulnerability Analysis & Real-World Impact**: Explains the root flaw, CWE ID, and OWASP category.
-2. **Adversary Exploitation Scenario**: Demonstrates how an attacker exploits the flaw in production.
-3. **Remediation Strategy & Defensive Patch**: Provides copy-paste syntax-highlighted patched code.
+1. **Vulnerability Analysis**: Root cause, CWE ID, and OWASP category.
+2. **Adversary Exploitation Scenario**: Real-world demonstration of how attackers exploit the vulnerability.
+3. **Remediation Strategy & Defensive Patch**: Copy-paste, syntax-highlighted code patches.
 
 ---
 
-### 8. Multi-Format Reporting & Executive Audit Certificates
+### Multi-Format Reporting & Executive Ship Certificates
 
-SecureShip generates reports for both developers and executives:
+Export findings in formats suited for developers, CI/CD pipelines, and leadership:
 ```bash
-# Rich Terminal Table (default)
+# Terminal Rich Table (default)
 secureship scan .
 
 # Standalone Print-Ready HTML Report
 secureship scan . --format html -o report.html
 
-# OASIS SARIF v2.1.0 (for GitHub Code Scanning & CI/CD)
+# OASIS SARIF v2.1.0 (for GitHub Security tab & CI/CD)
 secureship scan . --format sarif -o report.sarif
 
 # Machine-Readable JSON
 secureship scan . --format json -o report.json
 
 # Executive Ship Readiness Audit Certificate
-secureship certificate ./my-project -o Ship-Certificate.html
+secureship certificate ./my-app -o Ship-Certificate.html
 ```
 
 ---
 
-### 9. Automated GitHub Self-Updater (Public & Private Repos)
+### Seamless Self-Updating from GitHub
 
-SecureShip can update itself directly from your GitHub repository:
+SecureShip updates itself directly from the official repository:
 ```bash
-# Check for updates without applying
+# Check if updates are available
 secureship update --check
 
-# Apply latest update from public repository
+# Apply latest update
 secureship update
 
 # Update from a private GitHub repository using a Personal Access Token (PAT)
 secureship update --token ghp_YourGitHubTokenHere
 
-# Or save your token once into .secureshiprc:
+# Or save the token permanently into .secureshiprc:
 secureship config --github-token ghp_YourGitHubTokenHere
 ```
 
 ---
 
-## 💻 Complete CLI Command Reference
+## 💻 CLI Reference Manual
 
-| Command / Option | Description & Example |
+| Command / Option | Description & Practical Usage |
 | :--- | :--- |
-| `secureship scan` | Scan current folder across all 4 categories |
-| `secureship scan ./my-app` | Scan specific directory or file |
+| `secureship scan` | Full scan of current folder across all categories |
+| `secureship scan ./my-project` | Scan a specific project folder |
 | `secureship scan --modify-score 65` | Override passing gate score to 65% (default: 80) |
-| `secureship scan --strict-sca` | Block push if ANY dependency vulnerability is found |
-| `secureship scan --strict-iac` | Block push if ANY Docker/K8s misconfiguration is found |
-| `secureship scan --strict-sec` | Block push if ANY secret/token is found |
-| `secureship scan --strict-sast` | Block push if ANY SAST code vulnerability is found |
+| `secureship scan --strict-sca` | Block push if ANY dependency vulnerability is detected |
+| `secureship scan --strict-iac` | Block push if ANY Docker/K8s misconfiguration is detected |
+| `secureship scan --strict-sec` | Block push if ANY secret/token is detected |
+| `secureship scan --strict-sast` | Block push if ANY SAST code vulnerability is detected |
 | `secureship scan --confidence high` | Filter findings to high-accuracy zero-false-positive risks |
 | `secureship scan --sec` | Scan **ONLY Secrets** |
 | `secureship scan --iac` | Scan **ONLY Container & IaC** |
@@ -471,7 +501,7 @@ secureship config --github-token ghp_YourGitHubTokenHere
 | `secureship scan --sca` | Scan **ONLY Dependencies** |
 | `secureship scan --staged` | Scan only Git staged lines (pre-commit mode) |
 | `secureship scan --fail-on high` | Exit code 1 if findings equal or exceed High severity |
-| `secureship scan --format html -o report.html` | Export printable standalone HTML audit report |
+| `secureship scan --format html -o report.html` | Export standalone HTML audit report |
 | `secureship scan --format sarif -o report.sarif`| Export SARIF v2.1.0 for GitHub Security tab |
 | `secureship config --min-score 70` | Persist custom 70% threshold into `.secureshiprc` |
 | `secureship config --strict-sca` | Persist strict zero-tolerance SCA blocker |
@@ -479,7 +509,7 @@ secureship config --github-token ghp_YourGitHubTokenHere
 | `secureship config --show` | Display current repository quality gate rules |
 | `secureship rules` | List all 35+ built-in detection rules with CWE/OWASP IDs |
 | `secureship rules --category SECRETS` | Filter rules catalog by category |
-| `secureship explain <RULE_ID>` | Get AI / Expert exploit scenario and patched code fix |
+| `secureship explain <RULE_ID>` | View exploit scenario and defensive code patch |
 | `secureship history` | Display persistent SQLite scan audit history and scores |
 | `secureship certificate ./my-app` | Generate print-ready Executive Audit Certificate |
 | `secureship install-hook` | Install automated Git pre-commit & pre-push gates |
@@ -490,7 +520,7 @@ secureship config --github-token ghp_YourGitHubTokenHere
 | `secureship version` | Display installed software version |
 
 #### Direct Quick Options
-Options can also be passed directly to `secureship` without typing `scan`:
+Flags can be passed directly to `secureship` without typing `scan`:
 ```bash
 secureship --modify-score 65
 secureship --strict-sca
@@ -501,48 +531,40 @@ secureship --version
 
 ---
 
-## 🧩 VS Code Extension Features & Quick Fixes
+## 🧩 VS Code IDE Integration
 
-The VS Code Extension provides real-time in-editor security diagnostics:
+The VS Code extension provides in-editor security feedback as you code:
 
-1. **Inline Squiggly Diagnostics**:
-   - Highlights vulnerable lines with severity colors: Critical (Red), High (Orange), Medium (Yellow), Low (Blue).
-   - Tooltips show Rule ID, severity, CWE ID, OWASP category, and remediation advice.
-2. **Auto-Scan on Save**:
-   - Analyzes documents on save in under 50ms via `onDidSaveTextDocument`.
-3. **Activity Bar View ("SecureShip Findings")**:
-   - Dedicated sidebar grouping all workspace findings by Severity and File.
-   - Click any finding to jump directly to the offending line.
-4. **Status Bar Quality Gate**:
-   - Displays `$(shield) SecureShip: 85/100` in the status bar with one-click access to full reports.
-5. **Quick Fix Code Actions (<kbd>Ctrl</kbd> + <kbd>.</kbd> / <kbd>Cmd</kbd> + <kbd>.</kbd>)**:
-   - **`SAST-PY-007`**: Replaces `hashlib.md5(...)` with `hashlib.sha256(...)`.
-   - **`SEC-001`**: Extracts hardcoded secrets into `os.environ.get("AWS_ACCESS_KEY_ID")`.
-   - **`IAC-DOCKER-001`**: Inserts `USER appuser` into Dockerfiles.
-   - **Inline Suppression**: Inserts `# secureship-ignore: <RULE_ID>`.
+1. **Inline Squiggly Diagnostics**: Highlights vulnerable lines with severity colors (Critical in Red, High in Orange, Medium in Yellow, Low in Blue).
+2. **Auto-Scan on Save**: Evaluates documents on save in under 50ms.
+3. **Activity Bar View ("SecureShip Findings")**: Dedicated sidebar grouping findings by Severity and File. Click any finding to jump directly to the offending line.
+4. **Status Bar Quality Gate**: Displays `$(shield) SecureShip: 85/100` with one-click access to full reports.
+5. **Quick Fix Code Actions (<kbd>Ctrl</kbd> + <kbd>.</kbd>)**:
+   - Replaces MD5 with SHA-256 (`SAST-PY-007`).
+   - Extracts hardcoded secrets into `os.environ.get(...)` (`SEC-001`).
+   - Inserts `USER appuser` into Dockerfiles (`IAC-DOCKER-001`).
+   - Inserts inline suppression comments (`# secureship-ignore: <RULE_ID>`).
 
 ---
 
-## 🌐 Web Security Dashboard
+## 🌐 Interactive Cybersecurity Dashboard
 
-SecureShip includes an interactive cybersecurity dashboard built with React 18, Vite, and Tailwind CSS:
-
+Run:
 ```bash
 secureship serve --port 8787
 ```
 Open **`http://localhost:8787`** in your browser.
-
 - **Live Score Gauge**: Circular visual indicator of repository ship status.
 - **Interactive Threshold Slider**: Adjust passing gate % in real time.
-- **Repository Auditing Modes**: Scan local paths, public GitHub repository URLs, or uploaded `.zip` archives.
+- **Repository Auditing Modes**: Scan local paths, public GitHub repository URLs, or uploaded `.zip` files.
 - **Interactive Findings Explorer**: Search, filter by category/severity/confidence, and view exploit analyses.
 - **One-Click Exports**: Export HTML, JSON, SARIF, or Executive Certificates directly from the browser.
 
 ---
 
-## 🧪 Demo Vulnerable App Verification Matrix
+## 🧪 Vulnerability Verification Matrix
 
-The [demo-vulnerable-app/](file:///c:/Users/yaswanth/Downloads/SecureShip/demo-vulnerable-app) fixture verifies detection across all 4 categories:
+We verify our detection engine against the [demo-vulnerable-app/](file:///c:/Users/yaswanth/Downloads/SecureShip/demo-vulnerable-app) test fixture:
 
 | Target File | Vulnerability Description | Rule ID | Severity | Confidence | Status |
 | :--- | :--- | :--- | :---: | :---: | :---: |
@@ -579,9 +601,9 @@ The [demo-vulnerable-app/](file:///c:/Users/yaswanth/Downloads/SecureShip/demo-v
 
 ---
 
-## 🛡️ Automated Tests & Quality Assurance
+## 🛡️ Testing & Quality Assurance
 
-Run the comprehensive unit and integration test suite covering every scanner, accuracy filter, quality gate, CLI command, and REST API endpoint:
+Our test suite covers every scanner, confidence filter, quality gate, CLI command, and REST API endpoint:
 
 ```bash
 pytest engine/tests -v
