@@ -11,6 +11,7 @@ from secureship import (
     FindingCategory,
     RemediationEngine,
     SBOMGenerator,
+    SecretProtector,
     SecureShipEngine,
     Severity,
 )
@@ -364,3 +365,57 @@ def test_api_sbom_and_compliance():
     res_ci = client.get("/api/ci-templates")
     assert res_ci.status_code == 200
     assert "github" in res_ci.json()["platforms"]
+
+
+# =============================================================================
+# 9. SECRET SHIELD & GITIGNORE IMMUNIZATION TESTS
+# =============================================================================
+
+def test_secret_protector_creates_gitignore_and_protects(tmp_path):
+    # Create simulated secrets on disk
+    (tmp_path / ".env").write_text("DB_PASSWORD=supersecret\n", encoding="utf-8")
+    (tmp_path / "app.db").write_text("sqlite format 3\n", encoding="utf-8")
+
+    protector = SecretProtector(str(tmp_path))
+    res = protector.protect(tmp_path)
+
+    assert res["status"] == "PROTECTED"
+    assert (tmp_path / ".gitignore").exists()
+    content = (tmp_path / ".gitignore").read_text(encoding="utf-8")
+    assert ".env" in content
+    assert "*.db" in content
+    assert "*.sqlite" in content
+    assert "credentials.json" in content
+    assert ".env" in res["detected_sensitive_files"]
+    assert "app.db" in res["detected_sensitive_files"]
+
+
+def test_secret_protector_idempotent(tmp_path):
+    gitignore = tmp_path / ".gitignore"
+    gitignore.write_text("node_modules/\n.env\n", encoding="utf-8")
+
+    protector = SecretProtector(str(tmp_path))
+    res1 = protector.protect(tmp_path)
+    assert ".env" not in res1["patterns_added"]  # Already existed
+    assert "*.db" in res1["patterns_added"]
+
+    # Running a second time should add 0 new patterns
+    res2 = protector.protect(tmp_path)
+    assert res2["patterns_added"] == []
+
+
+def test_cli_protect_command(tmp_path):
+    (tmp_path / ".env.production").write_text("SECRET_KEY=12345\n", encoding="utf-8")
+
+    res = runner.invoke(cli_app, ["protect", str(tmp_path)])
+    assert res.exit_code == 0
+    assert "SecureShip Secret Shield & .gitignore Immunizer" in res.output
+    assert (tmp_path / ".gitignore").exists()
+    assert ".env.*" in (tmp_path / ".gitignore").read_text(encoding="utf-8")
+
+
+def test_api_protect_gitignore(tmp_path):
+    res = client.post("/api/protect-gitignore", json={"path": str(tmp_path), "unstage": False})
+    assert res.status_code == 200
+    assert res.json()["status"] == "PROTECTED"
+    assert (tmp_path / ".gitignore").exists()

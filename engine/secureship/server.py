@@ -21,6 +21,7 @@ from secureship.ci_generator import CIGenerator
 from secureship.compliance import ComplianceEngine
 from secureship.db import HistoryDB
 from secureship.models import Finding, ScanRequest, ScanResult, Severity
+from secureship.protector import SecretProtector
 from secureship.remediator import RemediationEngine
 from secureship.reporters.certificate_reporter import render_certificate_report
 from secureship.reporters.html_reporter import render_html_report
@@ -287,6 +288,19 @@ class CIRequest(BaseModel):
     platform: str
     path: str = "."
     overwrite: bool = False
+
+
+class ProtectRequest(BaseModel):
+    path: str = "."
+    unstage: bool = True
+
+
+@app.post("/api/protect-gitignore")
+def protect_gitignore_endpoint(req: ProtectRequest) -> Dict[str, Any]:
+    """Auto-protects repository by adding .env, DB credentials, private keys to .gitignore."""
+    target = Path(req.path).resolve()
+    protector = SecretProtector(str(target))
+    return protector.protect(target_dir=target, auto_unstage=req.unstage)
 
 
 @app.get("/api/sbom")

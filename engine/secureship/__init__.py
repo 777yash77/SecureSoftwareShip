@@ -3,6 +3,7 @@
 from secureship.ci_generator import CIGenerator
 from secureship.compliance import ComplianceEngine
 from secureship.models import Finding, FindingCategory, ScanResult, Severity, ShipStatus
+from secureship.protector import SecretProtector
 from secureship.remediator import RemediationEngine
 from secureship.sbom import SBOMGenerator
 from secureship.scanner import SecureShipEngine
@@ -22,4 +23,5 @@ __all__ = [
     "SBOMGenerator",
     "ComplianceEngine",
     "CIGenerator",
+    "SecretProtector",
 ]

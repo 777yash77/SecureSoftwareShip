@@ -403,6 +403,23 @@ secureship install-hook
 - Triggers automatically when running `git push`.
 - Audits the entire codebase against repository gate policies. If the verdict is **BLOCKED** or strict category violations exist, the push to remote is blocked.
 
+#### 3. Automatic .gitignore Secret Immunization (Secret Shield)
+- Before pushing or committing, SecureShip automatically scans your repository and ensures `.env`, database files, certificates, private keys, and cloud credentials are added to `.gitignore`.
+- If a sensitive credential file was accidentally staged in Git (`git add .env`), SecureShip automatically and safely un-stages it (`git rm --cached`) so secrets are never pushed to GitHub or remote repositories!
+
+Manual immunization command:
+```bash
+# Auto-protect repository .gitignore from secret leaks
+secureship protect .
+```
+
+Protected pattern categories:
+- **Environment files**: `.env`, `.env.*`, `*.env`, `.env.local`, `.env.production`
+- **Database & Data stores**: `*.db`, `*.sqlite`, `*.sqlite3`, `secureship.db`
+- **Cloud & API Credentials**: `credentials.json`, `service-account*.json`, `client_secret*.json`, `.aws/`
+- **Private Keys & Certificates**: `*.pem`, `*.key`, `*.pfx`, `*.pkcs12`, `id_rsa`, `id_ed25519`
+- **Audit tokens & caches**: `*.token`, `.secureship/`, `.secureshiprc`
+
 ---
 
 ### Audited Emergency Production Bypass

@@ -24,6 +24,7 @@ from secureship.compliance import ComplianceEngine
 from secureship.config import load_config, save_config
 from secureship.db import HistoryDB
 from secureship.models import Confidence, Finding, FindingCategory, Severity, ShipStatus
+from secureship.protector import SecretProtector
 from secureship.remediator import RemediationEngine
 from secureship.reporters.certificate_reporter import render_certificate_report
 from secureship.reporters.console_reporter import render_console_report
@@ -701,16 +702,19 @@ def install_hook(
         hooks_dir = git_dir / "hooks"
         hooks_dir.mkdir(parents=True, exist_ok=True)
 
-        # 1. Pre-Commit Hook (Scans staged changes fast)
+        # 1. Pre-Commit Hook (Scans staged changes fast and protects secrets)
         commit_hook = hooks_dir / "pre-commit"
         commit_content = """#!/usr/bin/env bash
 # SecureShip Git Pre-Commit Hook (Automated Shift-Left Security Gate)
-echo "🛡️  SecureShip: Scanning staged changes before commit..."
+echo "🛡️  SecureShip: Immunizing secrets and scanning staged changes..."
 
 if ! command -v secureship &> /dev/null; then
     echo "⚠️  SecureShip CLI not found in PATH. Skipping hook."
     exit 0
 fi
+
+# Automatically ensure .env, DB credentials, and private keys are in .gitignore
+secureship protect . &> /dev/null
 
 secureship scan --staged --fail-on high
 EXIT_CODE=$?
@@ -729,7 +733,8 @@ exit 0
         bat_commit = hooks_dir / "pre-commit.bat"
         bat_commit.write_text(
             "@echo off\n"
-            "echo 🛡️  SecureShip: Scanning staged changes before commit...\n"
+            "echo 🛡️  SecureShip: Immunizing secrets and scanning staged changes...\n"
+            "call secureship protect . >nul 2>&1\n"
             "secureship scan --staged --fail-on high\n"
             "if %ERRORLEVEL% NEQ 0 (\n"
             "    echo ❌ Commit rejected by SecureShip.\n"
@@ -742,7 +747,7 @@ exit 0
         push_hook = hooks_dir / "pre-push"
         push_content = """#!/usr/bin/env bash
 # SecureShip Git Pre-Push Hook (Automated Shift-Left Pipeline Gate)
-echo "🛡️  SecureShip: Running Pre-Push Security Audit & Ship-Readiness Check..."
+echo "🛡️  SecureShip: Running Pre-Push Security Audit & Secret Immunization..."
 
 BYPASS_FILE=".git/secureship-bypass.token"
 if [ "$SECURESHIP_BYPASS" = "1" ] || [ "$SECURESHIP_FORCE_PUSH" = "1" ] || [ -f "$BYPASS_FILE" ]; then
@@ -755,6 +760,9 @@ if ! command -v secureship &> /dev/null; then
     echo "⚠️  SecureShip CLI not found in PATH. Skipping pre-push gate."
     exit 0
 fi
+
+# Automatically ensure .env, DB credentials, and private keys are in .gitignore before push
+secureship protect . &> /dev/null
 
 secureship scan . --fail-on high
 EXIT_CODE=$?
@@ -786,13 +794,14 @@ exit 0
         bat_push = hooks_dir / "pre-push.bat"
         bat_push.write_text(
             "@echo off\n"
-            "echo 🛡️  SecureShip: Running Pre-Push Security Audit...\n"
+            "echo 🛡️  SecureShip: Running Pre-Push Security Audit & Secret Immunization...\n"
             "if exist \".git\\secureship-bypass.token\" (\n"
             "    echo ⚠️  [WARNING] SecureShip: Emergency bypass active. Gate overridden.\n"
             "    del \".git\\secureship-bypass.token\" >nul 2>&1\n"
             "    exit /b 0\n"
             ")\n"
             "if \"%SECURESHIP_BYPASS%\"==\"1\" exit /b 0\n"
+            "call secureship protect . >nul 2>&1\n"
             "secureship scan . --fail-on high\n"
             "if %ERRORLEVEL% NEQ 0 (\n"
             "    echo.\n"
@@ -819,10 +828,53 @@ exit 0
         typer.secho(f"Error installing Git hooks in '{repo_path}': {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
 
+    # Automatically immunize repository .gitignore right now
+    protector = SecretProtector(str(repo_path))
+    prot_res = protector.protect(repo_path)
+
     typer.secho(f"✅ SecureShip Git security gates successfully installed into: {hooks_dir}", fg=typer.colors.GREEN, bold=True)
-    typer.secho("🛡️  Gate 1: pre-commit  (blocks committing secrets/vulnerabilities)", fg=typer.colors.CYAN)
-    typer.secho("🛡️  Gate 2: pre-push    (blocks pushing unapproved code to GitHub)", fg=typer.colors.CYAN)
+    typer.secho("🛡️  Gate 1: pre-commit    (immunizes secrets & blocks committing vulnerabilities)", fg=typer.colors.CYAN)
+    typer.secho("🛡️  Gate 2: pre-push      (auto-protects .env/credentials & blocks unapproved push)", fg=typer.colors.CYAN)
+    typer.secho("🔒  Gate 3: secret-shield (automatically enforces .gitignore protection for .env & DBs)", fg=typer.colors.CYAN)
+    if prot_res["patterns_added"]:
+        typer.secho(f"   • Auto-protected {len(prot_res['patterns_added'])} sensitive credential patterns in .gitignore", fg=typer.colors.YELLOW)
+    if prot_res["files_unstaged"]:
+        typer.secho(f"   • Safely removed {len(prot_res['files_unstaged'])} sensitive file(s) from Git staging: {', '.join(prot_res['files_unstaged'])}", fg=typer.colors.YELLOW, bold=True)
     typer.secho("💡 Emergency Override: 'secureship bypass --push' or 'git push --no-verify'", fg=typer.colors.WHITE)
+
+
+@app.command()
+def protect(
+    path: str = typer.Argument(".", help="Target repository directory"),
+    unstage: bool = typer.Option(True, "--unstage/--no-unstage", help="Automatically remove staged secret files from Git index"),
+) -> None:
+    """Auto-protect repository: adds .env, DB credentials, private keys, and tokens to .gitignore before pushing."""
+    target = Path(path).resolve()
+    if not target.exists():
+        typer.secho(f"Error: Target path '{path}' does not exist.", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2)
+
+    protector = SecretProtector(str(target))
+    res = protector.protect(target_dir=target, auto_unstage=unstage)
+
+    typer.secho(f"\n🔒 SecureShip Secret Shield & .gitignore Immunizer", fg=typer.colors.CYAN, bold=True)
+    typer.echo(f"   Target: {target}")
+    typer.echo(f"   Config: {res['gitignore_path']}\n")
+
+    if res["patterns_added"]:
+        typer.secho(f"✅ Immunized .gitignore with {len(res['patterns_added'])} protected pattern(s):", fg=typer.colors.GREEN, bold=True)
+        for p in res["patterns_added"]:
+            typer.echo(f"   + {p}")
+    else:
+        typer.secho("✅ .gitignore already contains all critical credential and database protection patterns.", fg=typer.colors.GREEN)
+
+    if res["files_unstaged"]:
+        typer.secho(f"\n⚠️  CRITICAL: Safely un-staged {len(res['files_unstaged'])} sensitive file(s) from Git:", fg=typer.colors.YELLOW, bold=True)
+        for uf in res["files_unstaged"]:
+            typer.secho(f"   - {uf} (removed from Git staging index, local file preserved)", fg=typer.colors.YELLOW)
+
+    if res["detected_sensitive_files"]:
+        typer.echo(f"\n🛡️  Currently protected credential files on disk: {', '.join(res['detected_sensitive_files'])}\n")
 
 
 @app.command()
