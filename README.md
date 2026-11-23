@@ -10,7 +10,28 @@
 
 ---
 
+## 🚀 What's New in SecureShip v1.0.0 Enterprise Edition
+
+| Enterprise Capability | Command | Key Production Value |
+| :--- | :--- | :--- |
+| **🔒 Secret Shield & Git Immunizer** | `secureship protect .` | Auto-immunizes `.gitignore` against 28+ sensitive patterns and automatically unstages credentials (`git rm --cached`). |
+| **🌊 Static Taint Analysis Engine** | `secureship taint .` | AST source-to-sink dataflow tracking tracing untrusted HTTP/CLI inputs to SQL, shell, eval, and SSRF sinks. |
+| **📜 License Compliance Auditor** | `secureship license .` | Audits third-party dependencies for legal risks and flags viral copyleft obligations (GPL/AGPL/SSPL). |
+| **⚙️ CI/CD Supply Chain Auditor** | `secureship ci-audit .` | Audits GitHub Actions & GitLab CI for Pwn-Request flaws, unpinned actions, and script injections. |
+| **🎯 STRIDE Threat Modeling** | `secureship threat-model .` | Discovers exposed ports, endpoints, and databases to generate architectural threat risk matrices. |
+| **📜 Git History Secret Scanner** | `secureship git-history .` | Audits historical commit diffs (`git log -p`) for leaked secrets with automated purge remediation scripts. |
+| **🔐 Secret Vault Migrator** | `secureship vault .` | Extracts hardcoded secrets into `.env.example`, HashiCorp Vault KV payloads, and Kubernetes Secret manifests. |
+| **🏷️ Dynamic SVG Status Badge** | `secureship badge .` | Generates real-time Shields.io vector SVG security badges reflecting your repository's live security score. |
+| **🐳 Deep Container Inspector** | `secureship container .` | Audits Dockerfiles for missing multi-stage builds, dangerous SUID permissions, and image layer cache bloat. |
+| **🔧 Automated Auto-Remediation** | `secureship fix --apply` | Automatically and safely patches code flaws and container misconfigurations directly in-place. |
+| **📦 Standardized SBOM Generation** | `secureship sbom .` | Exports complete Software Bill of Materials in CycloneDX v1.5 JSON or SPDX v2.3 JSON formats. |
+| **🛡️ Regulatory Benchmarking** | `secureship compliance .` | Benchmarks repositories against OWASP Top 10 (2021), PCI-DSS v4.0, SOC 2 Type II, and NIST SSDF. |
+| **🚀 Shift-Left CI/CD Generator** | `secureship init-ci` | Generates turnkey pipeline workflows for GitHub Actions, GitLab CI, Azure DevOps, Bitbucket, and Jenkins. |
+
+---
+
 ## 📑 Table of Contents
+- [What's New in v1.0.0 Enterprise Edition](#-whats-new-in-secureship-v100-enterprise-edition)
 - [Why SecureShip?](#-why-secureship)
 - [System Architecture](#-system-architecture)
 - [Installation & Quick Start](#-installation--quick-start)
