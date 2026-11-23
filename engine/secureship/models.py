@@ -67,6 +67,14 @@ class Finding(BaseModel):
     auto_fix_hint: Optional[str] = None
     confidence: Confidence = Confidence.HIGH
 
+    @property
+    def cwe(self) -> str:
+        return self.cwe_id
+
+    @property
+    def finding_id(self) -> str:
+        return self.id
+
 
 class ScanSummary(BaseModel):
     total_findings: int = 0

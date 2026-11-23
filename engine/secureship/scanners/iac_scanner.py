@@ -20,7 +20,7 @@ class IaCScanner(BaseScanner):
 
     @property
     def supported_extensions(self) -> Set[str]:
-        return {".dockerfile", ".yml", ".yaml"}
+        return {".dockerfile", ".yml", ".yaml", ".tf"}
 
     def can_scan(self, file_path: Path) -> bool:
         name = file_path.name.lower()
@@ -28,24 +28,27 @@ class IaCScanner(BaseScanner):
             return True
         if name in ("docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"):
             return True
-        if file_path.suffix.lower() in (".yml", ".yaml"):
+        if file_path.suffix.lower() in (".yml", ".yaml", ".tf"):
             return True
         return False
 
     def scan_file(self, file_path: Path, relative_path: str, content: str) -> List[Finding]:
         findings: List[Finding] = []
         name = file_path.name.lower()
+        ext = file_path.suffix.lower()
 
-        if "dockerfile" in name or file_path.suffix.lower() == ".dockerfile":
+        if "dockerfile" in name or ext == ".dockerfile":
             findings.extend(self._scan_dockerfile(file_path, relative_path, content))
         elif name in ("docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"):
             findings.extend(self._scan_docker_compose(file_path, relative_path, content))
-        elif file_path.suffix.lower() in (".yml", ".yaml"):
+        elif ext in (".yml", ".yaml"):
             # Could be K8s manifest or compose
             if any(k in content for k in ("apiVersion:", "kind: Deployment", "kind: Pod", "kind: StatefulSet", "kind: DaemonSet")):
                 findings.extend(self._scan_k8s_manifest(file_path, relative_path, content))
             elif "services:" in content:
                 findings.extend(self._scan_docker_compose(file_path, relative_path, content))
+        elif ext == ".tf":
+            findings.extend(self._scan_terraform(file_path, relative_path, content))
 
         return findings
 
@@ -415,5 +418,89 @@ class IaCScanner(BaseScanner):
                         confidence=Confidence.HIGH,
                     )
                 )
+
+        return findings
+
+    # =========================================================================
+    # TERRAFORM SCANNER
+    # =========================================================================
+
+    def _scan_terraform(self, file_path: Path, relative_path: str, content: str) -> List[Finding]:
+        findings: List[Finding] = []
+        lines = content.splitlines()
+
+        for idx, line in enumerate(lines, 1):
+            line_stripped = line.strip()
+            if not line_stripped or line_stripped.startswith("#") or line_stripped.startswith("//"):
+                continue
+
+            # IAC-TF-001: Public S3 Bucket ACL
+            if not IgnoreMatcher.is_line_suppressed(line_stripped, "IAC-TF-001"):
+                if re.search(r'acl\s*=\s*["\'](public-read|public-read-write)["\']', line_stripped, re.IGNORECASE):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id="IAC-TF-001",
+                            title="Publicly Accessible S3 Bucket ACL",
+                            category=FindingCategory.IAC,
+                            severity=Severity.CRITICAL,
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line_stripped,
+                            owasp_category="A01:2021-Broken Access Control",
+                            cwe_id="CWE-284",
+                            description="Terraform config sets S3 bucket ACL to public-read or public-read-write, exposing all bucket data to the public internet.",
+                            remediation="Set acl = 'private' and enable aws_s3_bucket_public_access_block.",
+                            auto_fix_hint="acl = \"private\"",
+                            confidence=Confidence.HIGH,
+                        )
+                    )
+
+            # IAC-TF-002: Ingress from 0.0.0.0/0 on sensitive ports
+            if not IgnoreMatcher.is_line_suppressed(line_stripped, "IAC-TF-002"):
+                if re.search(r'cidr_blocks\s*=\s*\[\s*["\']0\.0\.0\.0/0["\']\s*\]', line_stripped) and any(p in content for p in ('from_port = 22', 'from_port = 3389', 'from_port = 3306', 'from_port = 5432')):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id="IAC-TF-002",
+                            title="Security Group Ingress Open to 0.0.0.0/0 on Sensitive Port",
+                            category=FindingCategory.IAC,
+                            severity=Severity.HIGH,
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line_stripped,
+                            owasp_category="A01:2021-Broken Access Control",
+                            cwe_id="CWE-284",
+                            description="Terraform security group opens sensitive port (SSH 22, RDP 3389, DB) to the entire public internet (0.0.0.0/0).",
+                            remediation="Restrict ingress cidr_blocks to specific trusted corporate IP blocks or VPN CIDRs.",
+                            auto_fix_hint="cidr_blocks = [\"10.0.0.0/16\"]",
+                            confidence=Confidence.HIGH,
+                        )
+                    )
+
+            # IAC-TF-003: Unencrypted EBS volume or RDS database
+            if not IgnoreMatcher.is_line_suppressed(line_stripped, "IAC-TF-003"):
+                if re.search(r'(encrypted|storage_encrypted)\s*=\s*false\b', line_stripped, re.IGNORECASE):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id="IAC-TF-003",
+                            title="Unencrypted Cloud Storage or Database Volume",
+                            category=FindingCategory.IAC,
+                            severity=Severity.HIGH,
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line_stripped,
+                            owasp_category="A02:2021-Cryptographic Failures",
+                            cwe_id="CWE-311",
+                            description="Terraform configuration explicitly disables encryption at rest on storage volume or relational database instance.",
+                            remediation="Enable encryption at rest (encrypted = true, storage_encrypted = true) using AWS KMS.",
+                            auto_fix_hint="encrypted = true",
+                            confidence=Confidence.HIGH,
+                        )
+                    )
 
         return findings

@@ -206,9 +206,29 @@ fail the build or git push:
   # High-accuracy scan (filters out false positives):
   secureship scan --confidence high
 
-SAVE AS PERMANENT REPO POLICY (.secureshiprc):
+SAVE AS PERMANENT REPO POLICY (.secureshiprc or ~/.secureship/config.json):
   secureship config --min-score 70 --strict-sca --min-confidence high
+  secureship config --global --min-score 60
   secureship config --show
+
+AUTOMATED REMEDIATION & ENTERPRISE TOOLS:
+  # Safe auto-remediation (preview dry-run diffs):
+  secureship fix ./my-project --dry-run
+  # Apply code and IaC fixes in-place:
+  secureship fix ./my-project --apply
+
+  # Generate CycloneDX v1.5 or SPDX v2.3 Software Bill of Materials (SBOM):
+  secureship sbom ./my-project --format cyclonedx -o sbom.json
+  secureship sbom ./my-project --format spdx -o sbom-spdx.json
+
+  # Audit against OWASP Top 10, PCI-DSS, SOC 2, and NIST SSDF compliance:
+  secureship compliance ./my-project --standard owasp
+  secureship compliance ./my-project --standard pci-dss
+
+  # Generate automated CI/CD pipeline workflows:
+  secureship init-ci --platform github
+  secureship init-ci --platform gitlab
+  secureship init-ci --all
 
 AUTO-UPDATE FROM GITHUB:
   # Check for updates:

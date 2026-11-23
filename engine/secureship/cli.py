@@ -19,14 +19,18 @@ from rich.text import Text
 from rich.syntax import Syntax
 
 from secureship.advisor import EXPERT_KNOWLEDGE_BASE, SecurityAdvisor
+from secureship.ci_generator import CIGenerator
+from secureship.compliance import ComplianceEngine
 from secureship.config import load_config, save_config
 from secureship.db import HistoryDB
 from secureship.models import Confidence, Finding, FindingCategory, Severity, ShipStatus
+from secureship.remediator import RemediationEngine
 from secureship.reporters.certificate_reporter import render_certificate_report
 from secureship.reporters.console_reporter import render_console_report
 from secureship.reporters.html_reporter import render_html_report
 from secureship.reporters.json_reporter import render_json_report
 from secureship.reporters.sarif_reporter import render_sarif_report
+from secureship.sbom import SBOMGenerator
 from secureship.scanner import SecureShipEngine
 from secureship.updater import run_self_update
 
@@ -69,6 +73,10 @@ Audit and evaluate codebases for hardcoded secrets, AST-based SAST code flaws, v
   [cyan]secureship update[/cyan]                             Fetch & install latest software updates from GitHub
   [cyan]secureship update --token ghp_...[/cyan]            Fetch update from private GitHub repository with PAT
   [cyan]secureship update --check[/cyan]                     Check for remote updates without applying
+  [cyan]secureship fix ./my-project[/cyan]                  Auto-remediate vulnerabilities (safe code hardening)
+  [cyan]secureship sbom ./my-project[/cyan]                 Generate CycloneDX 1.5 / SPDX 2.3 Software Bill of Materials
+  [cyan]secureship compliance ./my-project[/cyan]           Audit OWASP Top 10, PCI-DSS, SOC 2, and NIST compliance
+  [cyan]secureship init-ci --platform github[/cyan]         Generate automated CI/CD pipeline workflow (GitHub/GitLab/Azure)
   [cyan]secureship serve --port 8787[/cyan]                  Launch Web Security Dashboard on port 8787
   [cyan]secureship version[/cyan]                            Display installed SecureShip version
 """
@@ -884,6 +892,167 @@ def serve(
     except Exception as e:
         typer.secho(f"\n❌ Unexpected error running API server: {e}\n", fg=typer.colors.RED, bold=True, err=True)
         raise typer.Exit(code=1)
+
+
+@app.command()
+def fix(
+    path: str = typer.Argument(".", help="Target repository or file path to remediate"),
+    dry_run: bool = typer.Option(False, "--dry-run", "-d", help="Preview unified diffs without modifying files"),
+    apply: bool = typer.Option(False, "--apply", "-a", help="Apply code fixes directly in place"),
+    rules: Optional[List[str]] = typer.Option(None, "--rule", "-r", help="Specific rule IDs to remediate (e.g. IAC-DOCKER-001, SAST-PY-006)"),
+) -> None:
+    """Automated security remediation engine: preview or apply safe fixes to source code and IaC configs."""
+    target = Path(path).resolve()
+    if not target.exists():
+        typer.secho(f"Error: Target path '{path}' does not exist.", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2)
+
+    should_apply = apply and not dry_run
+    engine = RemediationEngine(str(target))
+    typer.secho(f"\n🔧 SecureShip Auto-Remediation Engine ({'APPLY' if should_apply else 'DRY RUN'})", fg=typer.colors.CYAN, bold=True)
+    typer.echo(f"   Target: {target}\n")
+
+    res = engine.scan_and_remediate(target_dir=target, apply=should_apply, rules=rules)
+    total_fixes = res["total_fixes"]
+    remediated_files = res["remediated_files"]
+
+    if total_fixes == 0:
+        typer.secho("✅ No auto-remediable vulnerabilities detected. Codebase is in good shape!", fg=typer.colors.GREEN, bold=True)
+        return
+
+    # Print diffs
+    for file_rel, diff_text in res["diffs"].items():
+        typer.secho(f"─── Diff for {file_rel} ───", fg=typer.colors.YELLOW, bold=True)
+        for line in diff_text.splitlines():
+            if line.startswith("+"):
+                typer.secho(line, fg=typer.colors.GREEN)
+            elif line.startswith("-"):
+                typer.secho(line, fg=typer.colors.RED)
+            else:
+                typer.echo(line)
+        typer.echo()
+
+    if should_apply:
+        typer.secho(f"✅ Successfully applied {total_fixes} fix(es) across {remediated_files} file(s)!", fg=typer.colors.GREEN, bold=True)
+    else:
+        typer.secho(f"💡 Found {total_fixes} remediable issue(s) across {remediated_files} file(s).", fg=typer.colors.YELLOW, bold=True)
+        typer.echo("   To apply these fixes automatically, re-run with: secureship fix --apply\n")
+
+
+@app.command()
+def sbom(
+    path: str = typer.Argument(".", help="Target project directory"),
+    format: str = typer.Option("cyclonedx", "--format", "-f", help="SBOM format: cyclonedx (CycloneDX 1.5 JSON) or spdx (SPDX 2.3 JSON)"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Save SBOM output to file path"),
+) -> None:
+    """Generate industry-standard Software Bill of Materials (SBOM) in CycloneDX v1.5 or SPDX v2.3 format."""
+    target = Path(path).resolve()
+    if not target.exists():
+        typer.secho(f"Error: Target path '{path}' does not exist.", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2)
+
+    gen = SBOMGenerator(str(target))
+    components = gen.discover_components(target)
+
+    # Render summary table
+    table = Table(title=f"📦 SecureShip Software Bill of Materials (SBOM) — {target.name}", border_style="cyan")
+    table.add_column("Package Name", style="bold white")
+    table.add_column("Version", style="cyan")
+    table.add_column("Ecosystem", style="yellow")
+    table.add_column("Package URL (purl)", style="dim")
+
+    for c in components[:30]:
+        table.add_row(c.name, c.version, c.ecosystem, c.purl)
+
+    console.print(table)
+    if len(components) > 30:
+        typer.echo(f"... and {len(components) - 30} more components.")
+
+    typer.echo(f"\n📊 Total Dependencies Discovered: {len(components)}")
+
+    sbom_data = gen.generate(target, format=format)
+    json_output = json.dumps(sbom_data, indent=2)
+
+    if output:
+        out_file = Path(output).resolve()
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+        out_file.write_text(json_output, encoding="utf-8")
+        typer.secho(f"✅ SBOM saved to: {out_file} ({format.upper()})", fg=typer.colors.GREEN, bold=True)
+    else:
+        typer.echo(f"💡 Use -o sbom.json to save full {format.upper()} document.")
+
+
+@app.command()
+def compliance(
+    path: str = typer.Argument(".", help="Target project directory"),
+    standard: str = typer.Option("owasp", "--standard", "-s", help="Benchmark: owasp (OWASP Top 10), pci (PCI-DSS), soc2 (SOC 2), nist (NIST SSDF)"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Save compliance report to file path"),
+) -> None:
+    """Map scan findings against international security standards (OWASP Top 10, PCI-DSS, SOC 2, NIST SSDF)."""
+    target = Path(path).resolve()
+    if not target.exists():
+        typer.secho(f"Error: Target path '{path}' does not exist.", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2)
+
+    engine = SecureShipEngine(str(target))
+    result = engine.scan()
+
+    comp_engine = ComplianceEngine()
+    rep = comp_engine.evaluate(result.findings, standard=standard)
+
+    table = Table(title=f"🛡️  Compliance Audit: {rep.standard_name}", border_style="cyan")
+    table.add_column("Control ID", style="bold white", width=12)
+    table.add_column("Control Name", style="white")
+    table.add_column("Status", width=10)
+    table.add_column("Violations", justify="right", width=12)
+
+    for c in rep.controls:
+        status_color = "[green]PASSED[/green]" if c.status == "PASSED" else "[bold red]VIOLATED[/bold red]"
+        viol_count = str(len(c.violations)) if c.violations else "-"
+        table.add_row(c.control_id, c.name, status_color, viol_count)
+
+    console.print(table)
+
+    score_color = typer.colors.GREEN if rep.compliance_score >= 80 else typer.colors.RED
+    typer.secho(f"\n📊 Compliance Readiness Score: {rep.compliance_score}% ({rep.passed_controls}/{rep.total_controls} Controls Passed)\n", fg=score_color, bold=True)
+
+    if output:
+        out_file = Path(output).resolve()
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+        out_file.write_text(json.dumps(ComplianceEngine.report_to_dict(rep), indent=2), encoding="utf-8")
+        typer.secho(f"✅ Compliance audit saved to: {out_file}", fg=typer.colors.GREEN)
+
+
+@app.command(name="init-ci")
+def init_ci(
+    path: str = typer.Option(".", "--path", "-p", help="Target repository directory"),
+    platform: Optional[str] = typer.Option(None, "--platform", help="Target CI platform: github, gitlab, azure, bitbucket, jenkins"),
+    all_ci: bool = typer.Option(False, "--all", help="Generate all supported CI pipeline workflow templates"),
+    overwrite: bool = typer.Option(False, "--overwrite", help="Overwrite existing pipeline configuration files"),
+) -> None:
+    """Generate automated Shift-Left DevSecOps CI/CD pipeline workflows for GitHub, GitLab, Azure, Bitbucket, or Jenkins."""
+    target = Path(path).resolve()
+    gen = CIGenerator(str(target))
+
+    if all_ci:
+        results = gen.generate_all(target_dir=target, overwrite=overwrite)
+        for r in results:
+            if r.get("created"):
+                typer.secho(f"✅ Generated {r['platform'].upper()} workflow: {r['file_path']}", fg=typer.colors.GREEN)
+            else:
+                typer.secho(f"⚠️  Skipped {r['platform'].upper()} (exists): {r['file_path']}", fg=typer.colors.YELLOW)
+        return
+
+    plat = (platform or "github").lower()
+    try:
+        r = gen.generate(plat, target_dir=target, overwrite=overwrite)
+        if r.get("created"):
+            typer.secho(f"✅ Successfully created {plat.upper()} DevSecOps workflow into: {r['file_path']}", fg=typer.colors.GREEN, bold=True)
+        else:
+            typer.secho(f"⚠️  {r.get('reason')} Use --overwrite to replace it.", fg=typer.colors.YELLOW)
+    except ValueError as e:
+        typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2)
 
 
 @app.command()

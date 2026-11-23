@@ -17,12 +17,16 @@ from pydantic import BaseModel
 
 
 from secureship.advisor import AdvisorResponse, SecurityAdvisor
+from secureship.ci_generator import CIGenerator
+from secureship.compliance import ComplianceEngine
 from secureship.db import HistoryDB
 from secureship.models import Finding, ScanRequest, ScanResult, Severity
+from secureship.remediator import RemediationEngine
 from secureship.reporters.certificate_reporter import render_certificate_report
 from secureship.reporters.html_reporter import render_html_report
 from secureship.reporters.json_reporter import render_json_report
 from secureship.reporters.sarif_reporter import render_sarif_report
+from secureship.sbom import SBOMGenerator
 from secureship.scanner import SecureShipEngine
 
 
@@ -271,6 +275,68 @@ def get_certificate_report(scan_id: Optional[str] = None) -> Response:
     target_scan = _resolve_scan(scan_id)
     cert_html = render_certificate_report(target_scan)
     return Response(content=cert_html, media_type="text/html")
+
+
+class FixRequest(BaseModel):
+    path: str = "."
+    apply: bool = False
+    rules: Optional[List[str]] = None
+
+
+class CIRequest(BaseModel):
+    platform: str
+    path: str = "."
+    overwrite: bool = False
+
+
+@app.get("/api/sbom")
+def get_sbom(
+    path: str = Query(".", description="Target repository path"),
+    format: str = Query("cyclonedx", description="cyclonedx or spdx"),
+) -> Dict[str, Any]:
+    """Generates CycloneDX v1.5 or SPDX v2.3 compliant Software Bill of Materials (SBOM)."""
+    target = Path(path).resolve()
+    gen = SBOMGenerator(str(target))
+    return gen.generate(target, format=format)
+
+
+@app.get("/api/compliance")
+def get_compliance(
+    scan_id: Optional[str] = Query(None),
+    standard: Optional[str] = Query(None),
+) -> Dict[str, Any]:
+    """Evaluates scan findings against international standards (OWASP Top 10, PCI-DSS, SOC 2, NIST SSDF)."""
+    target_scan = _resolve_scan(scan_id)
+    engine = ComplianceEngine()
+    if standard:
+        rep = engine.evaluate(target_scan.findings, standard=standard)
+        return ComplianceEngine.report_to_dict(rep)
+    return engine.evaluate_all(target_scan.findings)
+
+
+@app.post("/api/fix")
+def apply_fix(req: FixRequest) -> Dict[str, Any]:
+    """Automated security auto-fix engine: preview diffs or apply safe code remediations."""
+    target = Path(req.path).resolve()
+    engine = RemediationEngine(str(target))
+    return engine.scan_and_remediate(target_dir=target, apply=req.apply, rules=req.rules)
+
+
+@app.get("/api/ci-templates")
+def list_ci_templates() -> Dict[str, Any]:
+    """Lists available CI/CD platforms for automated shift-left pipeline generation."""
+    return {"platforms": list(CIGenerator.TEMPLATES.keys())}
+
+
+@app.post("/api/ci-templates")
+def generate_ci_template(req: CIRequest) -> Dict[str, Any]:
+    """Generates production-ready CI/CD shift-left pipeline workflow file."""
+    target = Path(req.path).resolve()
+    gen = CIGenerator(str(target))
+    try:
+        return gen.generate(req.platform, target_dir=target, overwrite=req.overwrite)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 def _resolve_scan(scan_id: Optional[str] = None) -> ScanResult:

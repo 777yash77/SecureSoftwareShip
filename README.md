@@ -442,6 +442,85 @@ Renders 3 structured analysis panels:
 
 ---
 
+### 🔧 Automated Auto-Remediation Engine (`secureship fix`)
+
+SecureShip can automatically and safely remediate detected code flaws and IaC misconfigurations without breaking application architecture:
+
+```bash
+# Preview remediation diffs without touching source files (Dry Run)
+secureship fix ./my-project --dry-run
+
+# Apply safe code and container fixes in-place
+secureship fix ./my-project --apply
+
+# Remediate specific vulnerability rules only
+secureship fix ./my-project --apply --rule IAC-DOCKER-001 --rule SAST-PY-006
+```
+
+#### Supported Auto-Fixes:
+- **Dockerfiles**: Automatically pins unpinned `:latest` base images to `:pinned-stable`, injects non-root `USER nonroot` before container entrypoints, and swaps unvalidated `ADD` for `COPY`.
+- **Docker Compose & K8s**: Automatically flips `privileged: true` to `privileged: false`, disables container `hostNetwork`, and restricts security contexts.
+- **Python SAST**: Upgrades weak `hashlib.md5`/`sha1` to `hashlib.sha256`, replaces `tempfile.mktemp()` with `tempfile.NamedTemporaryFile()`, turns off Flask debug mode (`debug=False`), and binds wildcards (`0.0.0.0` $\rightarrow$ `127.0.0.1`).
+- **JavaScript**: Removes wildcard CORS policies (`origin: '*'`).
+
+---
+
+### 📦 Software Bill of Materials (SBOM) Generation (`secureship sbom`)
+
+Comply with executive cybersecurity mandates (US Executive Order 14028, NIST SSDF) by generating standardized machine-readable SBOMs:
+
+```bash
+# Generate CycloneDX v1.5 JSON (OWASP & Enterprise standard)
+secureship sbom ./my-project --format cyclonedx -o sbom-cyclonedx.json
+
+# Generate SPDX v2.3 JSON (Linux Foundation standard)
+secureship sbom ./my-project --format spdx -o sbom-spdx.json
+```
+- Discovers dependencies across Python (`requirements.txt`), Node.js (`package.json`), Maven (`pom.xml`), and Go (`go.mod`).
+- Assigns canonical Package URLs (`purl`), version pins, and ecosystem metadata to every component.
+
+---
+
+### 🛡️ Regulatory & Compliance Benchmarking (`secureship compliance`)
+
+Evaluate codebases against international regulatory security frameworks with executive scoring (0–100%):
+
+```bash
+# Audit against OWASP Top 10 (2021)
+secureship compliance ./my-project --standard owasp
+
+# Audit against Payment Card Industry (PCI-DSS v4.0)
+secureship compliance ./my-project --standard pci-dss
+
+# Audit against SOC 2 Type II Trust Services Criteria
+secureship compliance ./my-project --standard soc2
+
+# Audit against NIST SP 800-218 Secure Software Development Framework (SSDF)
+secureship compliance ./my-project --standard nist
+```
+
+---
+
+### 🚀 Shift-Left CI/CD Pipeline Generator (`secureship init-ci`)
+
+Set up automated shift-left security enforcement in your repository's CI/CD pipeline in seconds:
+
+```bash
+# Generate GitHub Actions workflow (.github/workflows/secureship.yml)
+secureship init-ci --platform github
+
+# Generate GitLab CI DevSecOps stage (.gitlab-ci.yml)
+secureship init-ci --platform gitlab
+
+# Generate Azure DevOps pipeline (azure-pipelines.yml)
+secureship init-ci --platform azure
+
+# Generate all supported CI templates at once
+secureship init-ci --all
+```
+
+---
+
 ### Multi-Format Reporting & Executive Ship Certificates
 
 Export findings in formats suited for developers, CI/CD pipelines, and leadership:

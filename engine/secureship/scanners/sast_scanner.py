@@ -19,7 +19,7 @@ class SASTScanner(BaseScanner):
 
     @property
     def supported_extensions(self) -> Set[str]:
-        return {".py", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
+        return {".py", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".java", ".go"}
 
     def scan_file(self, file_path: Path, relative_path: str, content: str) -> List[Finding]:
         findings: List[Finding] = []
@@ -29,6 +29,10 @@ class SASTScanner(BaseScanner):
             findings.extend(self._scan_python(file_path, relative_path, content))
         elif ext in {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}:
             findings.extend(self._scan_javascript(file_path, relative_path, content))
+        elif ext == ".java":
+            findings.extend(self._scan_java(file_path, relative_path, content))
+        elif ext == ".go":
+            findings.extend(self._scan_go(file_path, relative_path, content))
 
         return findings
 
@@ -649,6 +653,268 @@ class SASTScanner(BaseScanner):
             if IgnoreMatcher.is_line_suppressed(line):
                 continue
             for rule in js_rules:
+                rule_id = rule["id"]
+                if IgnoreMatcher.is_line_suppressed(line, rule_id):
+                    continue
+                if rule["regex"].search(line):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id=rule_id,
+                            title=rule["title"],
+                            category=FindingCategory.SAST,
+                            severity=rule["severity"],
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line.strip(),
+                            owasp_category=rule["owasp"],
+                            cwe_id=rule["cwe"],
+                            description=rule["desc"],
+                            remediation=rule["rem"],
+                            auto_fix_hint=rule["fix"],
+                            confidence=rule.get("confidence", Confidence.HIGH),
+                        )
+                    )
+
+        return findings
+
+    # =========================================================================
+    # JAVA SAST
+    # =========================================================================
+
+    def _scan_java(self, file_path: Path, relative_path: str, content: str) -> List[Finding]:
+        findings: List[Finding] = []
+        lines = content.splitlines()
+
+        java_rules = [
+            {
+                "id": "SAST-JAVA-001",
+                "title": "Java Insecure Deserialization",
+                "regex": re.compile(r"(\bObjectInputStream\b|\.readObject\s*\(|\bXMLDecoder\s*\()", re.IGNORECASE),
+                "severity": Severity.CRITICAL,
+                "confidence": Confidence.HIGH,
+                "owasp": "A08:2021-Software and Data Integrity Failures",
+                "cwe": "CWE-502",
+                "desc": "Calling readObject() or XMLDecoder on untrusted byte streams leads to Remote Code Execution (RCE).",
+                "rem": "Use secure data formats like JSON (Jackson with safe typing) or implement ValidatingObjectInputStream.",
+                "fix": "Replace Java native serialization with Jackson ObjectMapper with safe default typing disabled.",
+            },
+            {
+                "id": "SAST-JAVA-002",
+                "title": "SQL Injection in JDBC / JPA Query",
+                "regex": re.compile(r"(\.executeQuery|\.executeUpdate|\.createNativeQuery)\s*\(\s*(\"[^\"]*\"\s*\+|[a-zA-Z0-9_\.]+\s*\+)", re.IGNORECASE),
+                "severity": Severity.CRITICAL,
+                "confidence": Confidence.HIGH,
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-89",
+                "desc": "SQL statement constructed by concatenating dynamic variables into executeQuery() or createNativeQuery().",
+                "rem": "Use PreparedStatement with parameterized '?' placeholders.",
+                "fix": "PreparedStatement stmt = conn.prepareStatement(\"SELECT * FROM users WHERE id = ?\"); stmt.setString(1, id);",
+            },
+            {
+                "id": "SAST-JAVA-003",
+                "title": "Command Injection via Runtime.exec() / ProcessBuilder",
+                "regex": re.compile(r"Runtime\.getRuntime\s*\(\s*\)\.exec\s*\(|new\s+ProcessBuilder\s*\(\s*(\"[^\"]*\"\s*\+|[a-zA-Z0-9_\.]+\s*\+)", re.IGNORECASE),
+                "severity": Severity.CRITICAL,
+                "confidence": Confidence.HIGH,
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-78",
+                "desc": "Execution of system commands with dynamic concatenated parameters exposes system to arbitrary OS command execution.",
+                "rem": "Avoid shell execution. Use discrete String[] argument lists with strict allowlisting.",
+                "fix": "ProcessBuilder pb = new ProcessBuilder(Arrays.asList(\"safe_cmd\", validatedArg));",
+            },
+            {
+                "id": "SAST-JAVA-004",
+                "title": "Weak Cryptographic Algorithm in Java",
+                "regex": re.compile(r"Cipher\.getInstance\s*\(\s*\"(DES|RC4|Blowfish|DESede)[\"/]|MessageDigest\.getInstance\s*\(\s*\"(MD5|SHA-1)\"", re.IGNORECASE),
+                "severity": Severity.HIGH,
+                "confidence": Confidence.HIGH,
+                "owasp": "A02:2021-Cryptographic Failures",
+                "cwe": "CWE-327",
+                "desc": "Use of broken cryptographic primitives (DES, RC4, MD5, SHA-1) vulnerable to collision and decryption attacks.",
+                "rem": "Use modern cryptographic algorithms such as AES/GCM/NoPadding for encryption and SHA-256 for hashing.",
+                "fix": "Cipher.getInstance(\"AES/GCM/NoPadding\") or MessageDigest.getInstance(\"SHA-256\")",
+            },
+            {
+                "id": "SAST-JAVA-005",
+                "title": "Path Traversal in Java File Access",
+                "regex": re.compile(r"new\s+(File|FileInputStream|FileOutputStream)\s*\([^)]*\+", re.IGNORECASE),
+                "severity": Severity.HIGH,
+                "confidence": Confidence.MEDIUM,
+                "owasp": "A01:2021-Broken Access Control",
+                "cwe": "CWE-22",
+                "desc": "Constructing file paths via direct string concatenation allows path traversal (directory climbing ../).",
+                "rem": "Normalize and validate paths using Path.normalize() and check startsWith() against canonical base directory.",
+                "fix": "Path safe = baseDir.resolve(input).normalize(); if (!safe.startsWith(baseDir)) throw new SecurityException();",
+            },
+            {
+                "id": "SAST-JAVA-006",
+                "title": "Hardcoded Secret or Private Key in Java",
+                "regex": re.compile(r"(private\s+static\s+final\s+String|String)\s+[a-zA-Z0-9_]*(SECRET|PASSWORD|PRIVATE_KEY|TOKEN)\s*=\s*\"[^\"]{8,}\"", re.IGNORECASE),
+                "severity": Severity.HIGH,
+                "confidence": Confidence.HIGH,
+                "owasp": "A07:2021-Identification and Authentication Failures",
+                "cwe": "CWE-798",
+                "desc": "Hardcoded secret, API token, or private key stored in Java source file.",
+                "rem": "Inject secrets at runtime via environment variables or secret management services (Vault, AWS Secrets Manager).",
+                "fix": "System.getenv(\"API_SECRET_KEY\")",
+            },
+            {
+                "id": "SAST-JAVA-007",
+                "title": "Spring Boot Actuator Wildcard Exposure",
+                "regex": re.compile(r"management\.endpoints\.web\.exposure\.include\s*=\s*\*"),
+                "severity": Severity.MEDIUM,
+                "confidence": Confidence.HIGH,
+                "owasp": "A05:2021-Security Misconfiguration",
+                "cwe": "CWE-16",
+                "desc": "Exposing all Spring Actuator endpoints (including /env, /heapdump, /beans) allows internal system reconnaissance.",
+                "rem": "Limit actuator exposure to essential endpoints such as 'health,info'.",
+                "fix": "management.endpoints.web.exposure.include=health,info",
+            },
+            {
+                "id": "SAST-JAVA-008",
+                "title": "Insecure XML Parsing / XXE Vulnerability",
+                "regex": re.compile(r"DocumentBuilderFactory\.newInstance\s*\(", re.IGNORECASE),
+                "severity": Severity.HIGH,
+                "confidence": Confidence.MEDIUM,
+                "owasp": "A05:2021-Security Misconfiguration",
+                "cwe": "CWE-611",
+                "desc": "DocumentBuilderFactory instantiated without disabling external DTDs or external entities, enabling XML External Entity (XXE) attacks.",
+                "rem": "Disable external general entities and DOCTYPE declarations before parsing XML.",
+                "fix": "dbf.setFeature(\"http://apache.org/xml/features/disallow-doctype-decl\", true);",
+            },
+        ]
+
+        for idx, line in enumerate(lines, 1):
+            if not line.strip() or line.strip().startswith("//") or line.strip().startswith("/*"):
+                continue
+            for rule in java_rules:
+                rule_id = rule["id"]
+                if IgnoreMatcher.is_line_suppressed(line, rule_id):
+                    continue
+                if rule["regex"].search(line):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id=rule_id,
+                            title=rule["title"],
+                            category=FindingCategory.SAST,
+                            severity=rule["severity"],
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line.strip(),
+                            owasp_category=rule["owasp"],
+                            cwe_id=rule["cwe"],
+                            description=rule["desc"],
+                            remediation=rule["rem"],
+                            auto_fix_hint=rule["fix"],
+                            confidence=rule.get("confidence", Confidence.HIGH),
+                        )
+                    )
+
+        return findings
+
+    # =========================================================================
+    # GO / GOLANG SAST
+    # =========================================================================
+
+    def _scan_go(self, file_path: Path, relative_path: str, content: str) -> List[Finding]:
+        findings: List[Finding] = []
+        lines = content.splitlines()
+
+        go_rules = [
+            {
+                "id": "SAST-GO-001",
+                "title": "SQL Injection in Go database/sql",
+                "regex": re.compile(r"(\.Query|\.QueryRow|\.Exec)\s*\(\s*(fmt\.Sprintf|\"[^\"]*\"\s*\+)", re.IGNORECASE),
+                "severity": Severity.CRITICAL,
+                "confidence": Confidence.HIGH,
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-89",
+                "desc": "SQL query formed by dynamic string formatting or concatenation in Go database/sql package.",
+                "rem": "Use parameterized queries with placeholder parameters ($1, ?, etc.).",
+                "fix": "db.Query(\"SELECT * FROM users WHERE id = $1\", userID)",
+            },
+            {
+                "id": "SAST-GO-002",
+                "title": "Command Injection in Go exec.Command",
+                "regex": re.compile(r"exec\.Command\s*\(\s*\"(sh|bash|cmd)\"\s*,\s*\"-c\"\s*,\s*(fmt\.Sprintf|\"[^\"]*\"\s*\+|[a-zA-Z0-9_\.]+)", re.IGNORECASE),
+                "severity": Severity.CRITICAL,
+                "confidence": Confidence.HIGH,
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-78",
+                "desc": "Spawning system shell with unvalidated dynamic string argument enables Command Injection.",
+                "rem": "Execute binary directly without invoking a subshell and pass discrete arguments.",
+                "fix": "exec.Command(\"binary_name\", arg1, arg2)",
+            },
+            {
+                "id": "SAST-GO-003",
+                "title": "Insecure TLS Certificate Verification (InsecureSkipVerify: true)",
+                "regex": re.compile(r"InsecureSkipVerify\s*:\s*true\b"),
+                "severity": Severity.HIGH,
+                "confidence": Confidence.HIGH,
+                "owasp": "A02:2021-Cryptographic Failures",
+                "cwe": "CWE-295",
+                "desc": "Disabling TLS certificate verification allows Man-In-The-Middle (MITM) attacks and data interception.",
+                "rem": "Set InsecureSkipVerify: false or load custom CA root certificates into tls.Config.RootCAs.",
+                "fix": "InsecureSkipVerify: false",
+            },
+            {
+                "id": "SAST-GO-004",
+                "title": "Weak Hashing / Cryptography in Go",
+                "regex": re.compile(r"\b(md5\.New|sha1\.New|des\.NewCipher)\s*\(\s*\)"),
+                "severity": Severity.HIGH,
+                "confidence": Confidence.HIGH,
+                "owasp": "A02:2021-Cryptographic Failures",
+                "cwe": "CWE-327",
+                "desc": "Use of broken cryptographic primitives (MD5, SHA-1, DES) vulnerable to hash collisions and decryption.",
+                "rem": "Use crypto/sha256 or crypto/aes with Galois/Counter Mode (GCM).",
+                "fix": "sha256.New()",
+            },
+            {
+                "id": "SAST-GO-005",
+                "title": "Path Traversal in Go File Operations",
+                "regex": re.compile(r"os\.(Open|ReadFile|Create)\s*\(\s*(fmt\.Sprintf|\"[^\"]*\"\s*\+|filepath\.Join\([^)]*\+)", re.IGNORECASE),
+                "severity": Severity.HIGH,
+                "confidence": Confidence.MEDIUM,
+                "owasp": "A01:2021-Broken Access Control",
+                "cwe": "CWE-22",
+                "desc": "File opened via dynamic path concatenation without filepath.Clean() verification.",
+                "rem": "Sanitize user input with filepath.Clean() and ensure the target resides within the allowed base directory.",
+                "fix": "cleanPath := filepath.Clean(userPath); if !strings.HasPrefix(cleanPath, baseDir) { return err }",
+            },
+            {
+                "id": "SAST-GO-006",
+                "title": "Hardcoded Credentials in Go Source",
+                "regex": re.compile(r"(const|var)\s+[a-zA-Z0-9_]*(Secret|Password|ApiKey|Token)\s*=\s*\"[^\"]{8,}\"", re.IGNORECASE),
+                "severity": Severity.HIGH,
+                "confidence": Confidence.HIGH,
+                "owasp": "A07:2021-Identification and Authentication Failures",
+                "cwe": "CWE-798",
+                "desc": "Hardcoded secret or authentication token in Go file.",
+                "rem": "Read secrets from environment variables (os.Getenv) or a secrets manager.",
+                "fix": "os.Getenv(\"API_SECRET_KEY\")",
+            },
+            {
+                "id": "SAST-GO-007",
+                "title": "Dangerous unsafe.Pointer Memory Manipulation",
+                "regex": re.compile(r"unsafe\.Pointer\s*\("),
+                "severity": Severity.MEDIUM,
+                "confidence": Confidence.HIGH,
+                "owasp": "A04:2021-Insecure Design",
+                "cwe": "CWE-119",
+                "desc": "Bypassing Go type safety using unsafe.Pointer can cause memory corruption, segmentation faults, or buffer overflows.",
+                "rem": "Use safe idiomatic Go types and standard library conversions.",
+                "fix": "Refactor to use standard safe type conversions.",
+            },
+        ]
+
+        for idx, line in enumerate(lines, 1):
+            if not line.strip() or line.strip().startswith("//"):
+                continue
+            for rule in go_rules:
                 rule_id = rule["id"]
                 if IgnoreMatcher.is_line_suppressed(line, rule_id):
                     continue
