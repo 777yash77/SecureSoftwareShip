@@ -91,9 +91,9 @@ flowchart TD
         SQLITE[("SQLite Audit Store\n(~/.secureship/history.db)")]
         ADVISOR["Exploit Intelligence & AI Advisor\n(Exploit Scenarios & Defenses)"]
 
-        subgraph ModularScanners ["Multi-Tier Inspection Domains (50+ Rules)"]
+        subgraph ModularScanners ["Multi-Tier Inspection Domains (60+ Rules)"]
             S1["Secrets & Shannon Entropy\n(API Keys, Cloud Tokens, DB Strings)"]
-            S2["Multi-Language SAST Engine\n(Python AST, JS/TS, Java, Go)"]
+            S2["Multi-Language SAST Engine\n(Python, JS/TS, Java, Go, C/C++, PHP, C#)"]
             S3["Software Supply Chain / SCA\n(OSV.dev Batch API + Offline CVE DB)"]
             S4["IaC & Container Security\n(Dockerfile, Compose, K8s, Terraform)"]
         end
@@ -105,6 +105,9 @@ flowchart TD
             E4["Secret Vault Migrator\n(.env.example, Vault KV, K8s Secret)"]
             E5["Auto-Remediation Engine\n(Safe In-Place AST & IaC Patches)"]
             E6["SBOM & Compliance\n(CycloneDX, SPDX, OWASP, PCI-DSS, SOC 2, NIST)"]
+            E7["License Compliance Auditor\n(OSS Risk Tiers, Copyleft Viral Flags)"]
+            E8["Static Taint Analysis\n(Source-to-Sink Dataflow Tracking)"]
+            E9["CI/CD Supply Chain Auditor\n(Pwn-Request, Unpinned Actions, Secrets)"]
         end
     end
 
@@ -898,6 +901,40 @@ We verify our detection engine against the [demo-vulnerable-app/](file:///c:/Use
 | `docker-compose.yml` | Privileged Container Mode (`privileged: true`)| `IAC-COMPOSE-001`| CRITICAL | HIGH | Detected |
 | `docker-compose.yml` | Sensitive Database Port (`5432`) Bound to 0.0.0.0 | `IAC-COMPOSE-002`| HIGH | HIGH | Detected |
 | `k8s-pod.yaml` | Missing Pod Resource Limits (CPU/Memory) | `IAC-K8S-001` | MEDIUM | HIGH | Detected |
+| `main.tf` | Publicly Accessible RDS Database Instance | `IAC-TF-004` | CRITICAL | HIGH | Detected |
+| `main.tf` | Overly Permissive IAM Policy with Wildcard `*` | `IAC-TF-005` | HIGH | HIGH | Detected |
+| `tokens.py` | Hardcoded Slack Bot OAuth Token (`xoxb-...`) | `SEC-012` | CRITICAL | HIGH | Detected |
+| `tokens.py` | Hardcoded Twilio Account SID (`AC...`) | `SEC-014` | HIGH | HIGH | Detected |
+| `tokens.py` | Hardcoded SendGrid API Key (`SG...`) | `SEC-015` | CRITICAL | HIGH | Detected |
+| `tokens.py` | MongoDB Atlas Cluster URI with Credentials | `SEC-022` | HIGH | HIGH | Detected |
+| `main.c` | Insecure Buffer Overflow in `strcpy()` | `SAST-C-001` | CRITICAL | HIGH | Detected |
+| `main.c` | Dangerous `gets()` Removal Flaw | `SAST-C-002` | CRITICAL | HIGH | Detected |
+| `index.php` | Remote Code Execution in `eval()` | `SAST-PHP-001` | CRITICAL | HIGH | Detected |
+| `index.php` | Remote/Local File Inclusion in `include()` | `SAST-PHP-002` | CRITICAL | HIGH | Detected |
+| `Program.cs` | Insecure Deserialization in `BinaryFormatter` | `SAST-CS-001` | CRITICAL | HIGH | Detected |
+| `.github/workflows/ci.yml` | Pwn-Request Vulnerability (PR Head Checkout) | `CICD-GH-001` | CRITICAL | HIGH | Detected |
+| `.github/workflows/ci.yml` | Unpinned Third-Party Action (`@v3`) | `CICD-GH-002` | MEDIUM | HIGH | Detected |
+| `.github/workflows/ci.yml` | Script Injection via GitHub Context in Run Step | `CICD-GH-003` | HIGH | HIGH | Detected |
+
+---
+
+## 🧭 Project Vision & Engineering Principles
+
+> *"Security shouldn't be an afterthought relegated to a noisy, asynchronous security dashboard days after code is deployed. Security belongs at the exact moment code is typed, committed, and shipped."*
+
+We engineered **SecureShip** around four non-negotiable principles:
+
+1. **Absolute Local Autonomy (Zero Cloud Phoning Home)**
+   Your proprietary source code, internal IP, and private variables should never leave your development machine or internal VPC. SecureShip operates completely offline with built-in AST parsers, local entropy math, and an offline CVE catalog.
+
+2. **Shift-Left Enforcement at the Git Boundary**
+   Vulnerabilities are 100x cheaper to fix on the developer's laptop than in production. SecureShip sits directly at `git commit` and `git push`, immunizes `.gitignore` against accidental secret leaks, and prevents high-risk code from ever touching origin branches.
+
+3. **High Mathematical Precision (Zero Tolerance for False-Positive Noise)**
+   Traditional regex scanners drown developers in noisy warnings. SecureShip uses AST tree traversal, Shannon entropy distributions, and static taint analysis (source-to-sink tracking) so developers only see real, actionable, exploitable vulnerabilities.
+
+4. **Actionable Remediation Over Blind Warning**
+   Every finding comes with an exploitation scenario, CWE mapping, and copy-paste defensive patches. When you run `secureship fix --apply`, the engine safely repairs code and container configurations in-place.
 
 ---
 
