@@ -21,11 +21,13 @@ from rich.syntax import Syntax
 from secureship.advisor import EXPERT_KNOWLEDGE_BASE, SecurityAdvisor
 from secureship.badge import BadgeGenerator
 from secureship.ci_generator import CIGenerator
+from secureship.ci_cd_auditor import CICDAuditor
 from secureship.compliance import ComplianceEngine
 from secureship.config import load_config, save_config
 from secureship.container_auditor import ContainerAuditor
 from secureship.db import HistoryDB
 from secureship.git_scanner import GitHistoryScanner
+from secureship.license_checker import LicenseAuditor
 from secureship.models import Confidence, Finding, FindingCategory, Severity, ShipStatus
 from secureship.protector import SecretProtector
 from secureship.remediator import RemediationEngine
@@ -36,6 +38,7 @@ from secureship.reporters.json_reporter import render_json_report
 from secureship.reporters.sarif_reporter import render_sarif_report
 from secureship.sbom import SBOMGenerator
 from secureship.scanner import SecureShipEngine
+from secureship.taint_analyzer import TaintAnalyzer
 from secureship.threat_model import ThreatModelingEngine
 from secureship.updater import run_self_update
 from secureship.vault import VaultMigrator
@@ -1290,6 +1293,118 @@ def container(
 
     console.print(table)
     typer.secho(f"\n💡 Detected {len(findings)} container hardening recommendation(s).\n", fg=typer.colors.YELLOW)
+
+
+@app.command()
+def license(
+    path: str = typer.Argument(".", help="Target repository directory"),
+    policy: str = typer.Option("commercial", "--policy", "-p", help="Policy: permissive, commercial, or strict"),
+    format: str = typer.Option("rich", "--format", "-f", help="Output format: rich or json"),
+) -> None:
+    """Audit third-party dependencies for Open-Source License compliance and legal risks."""
+    target = Path(path).resolve()
+    auditor = LicenseAuditor(str(target))
+    data = auditor.audit(policy=policy)
+
+    if format.lower() == "json":
+        typer.echo(json.dumps(data, indent=2))
+        return
+
+    typer.secho(f"\n📜 SecureShip Open-Source License Compliance: {target.name}", fg=typer.colors.CYAN, bold=True)
+    typer.echo(f"   Target: {target}")
+    typer.echo(f"   Policy: {policy.upper()} (Score: {data['compliance_score']}/100)")
+    typer.echo(f"   Packages Audited: {data['total_packages']}  |  Violations: {data['violations_count']}\n")
+
+    table = Table(title=f"License Compliance Audit ({policy.upper()} Policy)", border_style="cyan")
+    table.add_column("Package", style="bold white")
+    table.add_column("Version", width=12)
+    table.add_column("License", style="cyan", width=16)
+    table.add_column("Risk Tier", width=18)
+    table.add_column("Status", width=14)
+
+    for p in data["packages"]:
+        status = "[green]COMPLIANT[/green]" if p["compliant"] else "[red]VIOLATION[/red]"
+        risk_color = "[red]STRONG COPYLEFT[/red]" if p["risk"] == "STRONG_COPYLEFT" else "[green]PERMISSIVE[/green]" if p["risk"] == "PERMISSIVE" else "[yellow]NOTICE[/yellow]"
+        table.add_row(p["package"], p["version"], p["license"], risk_color, status)
+
+    console.print(table)
+    if data["violations"]:
+        typer.secho(f"\n❌ [LEGAL RISK]: Detected {len(data['violations'])} license policy violation(s)!", fg=typer.colors.RED, bold=True)
+        for v in data["violations"][:3]:
+            typer.echo(f"   • {v['package']} ({v['license']}): {v['remediation']}")
+        typer.echo()
+    else:
+        typer.secho("\n✅ All third-party software dependencies comply with license risk policy!\n", fg=typer.colors.GREEN, bold=True)
+
+
+@app.command()
+def taint(
+    path: str = typer.Argument(".", help="Target repository directory"),
+    format: str = typer.Option("rich", "--format", "-f", help="Output format: rich or json"),
+) -> None:
+    """Perform static taint analysis (source-to-sink dataflow tracking) on Python and JS."""
+    target = Path(path).resolve()
+    analyzer = TaintAnalyzer(str(target))
+    data = analyzer.analyze()
+
+    if format.lower() == "json":
+        typer.echo(json.dumps(data, indent=2))
+        return
+
+    typer.secho(f"\n🌊 SecureShip Static Taint Analysis: {target.name}", fg=typer.colors.CYAN, bold=True)
+    typer.echo(f"   Target: {target}")
+    typer.echo(f"   Status: {data['status']}  |  Taint Findings: {data['total_taint_findings']}\n")
+
+    if not data["findings"]:
+        typer.secho("✅ No unsanitized source-to-sink injection flows detected!", fg=typer.colors.GREEN, bold=True)
+        return
+
+    table = Table(title="Untrusted Dataflow (Source -> Sink) Traces", border_style="red")
+    table.add_column("Sink Vulnerability", style="bold red", width=20)
+    table.add_column("Taint Call Path", style="yellow")
+    table.add_column("File:Line", style="cyan", width=25)
+
+    for f in data["findings"]:
+        table.add_row(f["sink_type"], f["call_path"], f"{f['file']}:{f['sink_line']}")
+
+    console.print(table)
+    typer.secho(f"\n🚨 Detected {len(data['findings'])} dangerous unsanitized taint flow(s)!\n", fg=typer.colors.RED)
+
+
+@app.command("ci-audit")
+def ci_audit(
+    path: str = typer.Argument(".", help="Target repository directory"),
+    format: str = typer.Option("rich", "--format", "-f", help="Output format: rich or json"),
+) -> None:
+    """Audit CI/CD pipeline definitions (GitHub Actions, GitLab CI) for supply-chain risks."""
+    target = Path(path).resolve()
+    auditor = CICDAuditor(str(target))
+    data = auditor.audit()
+
+    if format.lower() == "json":
+        typer.echo(json.dumps(data, indent=2))
+        return
+
+    typer.secho(f"\n⚙️ SecureShip CI/CD Supply Chain Pipeline Auditor", fg=typer.colors.CYAN, bold=True)
+    typer.echo(f"   Target: {target}")
+    typer.echo(f"   Findings: {data['total_findings']}\n")
+
+    if not data["findings"]:
+        typer.secho("✅ CI/CD workflows adhere to pipeline hardening standards (pinned SHAs, least privilege)!", fg=typer.colors.GREEN, bold=True)
+        return
+
+    table = Table(title="CI/CD Pipeline Security Findings", border_style="cyan")
+    table.add_column("Rule ID", style="bold white", width=14)
+    table.add_column("Title", style="white")
+    table.add_column("Severity", width=10)
+    table.add_column("File:Line", style="cyan")
+
+    for f in data["findings"]:
+        sev_color = "[red]CRITICAL[/red]" if f["severity"] == "CRITICAL" else "[yellow]HIGH[/yellow]" if f["severity"] == "HIGH" else "[dim]MEDIUM[/dim]"
+        table.add_row(f["rule_id"], f["title"], sev_color, f"{f['file']}:{f['line']}")
+
+    console.print(table)
+    typer.secho(f"\n💡 Found {len(data['findings'])} CI/CD supply-chain security recommendations.\n", fg=typer.colors.YELLOW)
 
 
 @app.command()

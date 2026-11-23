@@ -19,10 +19,12 @@ from pydantic import BaseModel
 from secureship.advisor import AdvisorResponse, SecurityAdvisor
 from secureship.badge import BadgeGenerator
 from secureship.ci_generator import CIGenerator
+from secureship.ci_cd_auditor import CICDAuditor
 from secureship.compliance import ComplianceEngine
 from secureship.container_auditor import ContainerAuditor
 from secureship.db import HistoryDB
 from secureship.git_scanner import GitHistoryScanner
+from secureship.license_checker import LicenseAuditor
 from secureship.models import Finding, ScanRequest, ScanResult, Severity
 from secureship.protector import SecretProtector
 from secureship.remediator import RemediationEngine
@@ -32,6 +34,7 @@ from secureship.reporters.json_reporter import render_json_report
 from secureship.reporters.sarif_reporter import render_sarif_report
 from secureship.sbom import SBOMGenerator
 from secureship.scanner import SecureShipEngine
+from secureship.taint_analyzer import TaintAnalyzer
 from secureship.threat_model import ThreatModelingEngine
 from secureship.vault import VaultMigrator
 
@@ -411,6 +414,33 @@ def generate_ci_template(req: CIRequest) -> Dict[str, Any]:
         return gen.generate(req.platform, target_dir=target, overwrite=req.overwrite)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/license")
+def get_license_audit(
+    path: str = Query(".", description="Target repository path"),
+    policy: str = Query("commercial", description="License policy: permissive, commercial, or strict"),
+) -> Dict[str, Any]:
+    """Audits dependencies for Open-Source License compliance and legal viral copyleft risk."""
+    target = Path(path).resolve()
+    auditor = LicenseAuditor(str(target))
+    return auditor.audit(policy=policy)
+
+
+@app.get("/api/taint")
+def get_taint_analysis(path: str = Query(".", description="Target repository path")) -> Dict[str, Any]:
+    """Static taint analysis: traces untrusted HTTP/CLI inputs to dangerous injection sinks."""
+    target = Path(path).resolve()
+    analyzer = TaintAnalyzer(str(target))
+    return analyzer.analyze()
+
+
+@app.get("/api/ci-audit")
+def get_ci_audit(path: str = Query(".", description="Target repository path")) -> Dict[str, Any]:
+    """Audits CI/CD pipeline definitions (.github/workflows) for supply-chain vulnerabilities."""
+    target = Path(path).resolve()
+    auditor = CICDAuditor(str(target))
+    return auditor.audit()
 
 
 def _resolve_scan(scan_id: Optional[str] = None) -> ScanResult:

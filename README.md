@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-75%2F75%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-86%2F86%20passed-brightgreen.svg)]()
 [![Code Format](https://img.shields.io/badge/SARIF-v2.1.0%20OASIS-orange.svg)]()
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
@@ -40,6 +40,9 @@
   - [Secret Vault & Environment Migrator (`secureship vault`)](#-secret-vault--environment-migrator-secureship-vault)
   - [Dynamic README Security Badge Generator (`secureship badge`)](#-dynamic-readme-security-badge-generator-secureship-badge)
   - [Deep Container Security Inspector (`secureship container`)](#-deep-container--dockerfile-security-inspector-secureship-container)
+  - [Open-Source License Compliance & Legal Risk Auditor (`secureship license`)](#-open-source-license-compliance--legal-risk-auditor-secureship-license)
+  - [Static Taint Analysis Engine (`secureship taint`)](#-static-taint-analysis-engine-secureship-taint)
+  - [CI/CD Supply Chain Security Auditor (`secureship ci-audit`)](#-cicd-supply-chain-security-auditor-secureship-ci-audit)
   - [Multi-Format Reporting & Executive Ship Certificates](#multi-format-reporting--executive-ship-certificates)
   - [Seamless Self-Updating from GitHub](#seamless-self-updating-from-github)
 - [CLI Reference Manual](#-cli-reference-manual)
@@ -662,6 +665,70 @@ Deep container security checks:
 
 ---
 
+### 📜 Open-Source License Compliance & Legal Risk Auditor (`secureship license`)
+
+Audit all third-party dependencies (`package.json`, `requirements.txt`, `pom.xml`, `go.mod`) for license compliance and legal copyleft risk:
+
+```bash
+# Commercial policy (allows Permissive and Notice/LGPL; flags viral GPL/AGPL)
+secureship license ./my-project --policy commercial
+
+# Strict permissive-only policy (MIT, Apache, BSD, ISC only)
+secureship license ./my-project --policy strict
+
+# Export machine-readable license audit JSON
+secureship license ./my-project --format json -o licenses.json
+```
+
+License risk classification tiers:
+- **Permissive**: MIT, Apache-2.0, BSD-2/3-Clause, ISC, Unlicense, CC0-1.0, 0BSD.
+- **Notice / Weak Copyleft**: LGPL-2.1, LGPL-3.0, MPL-2.0, CDDL-1.0, EPL-2.0.
+- **Strong Copyleft (High Legal Risk)**: GPL-2.0, GPL-3.0, AGPL-3.0, OSL-3.0 (viral clauses that can legally mandate open-sourcing closed-source proprietary software).
+- **Restricted / Commercial**: SSPL-1.0, BSL-1.1, Commons Clause.
+
+---
+
+### 🌊 Static Taint Analysis Engine (`secureship taint`)
+
+Perform source-to-sink dataflow tracking on Python and JavaScript/TypeScript codebases with mathematical precision:
+
+```bash
+# Analyze repository for untrusted dataflow traces
+secureship taint ./my-project
+
+# Export structured taint analysis report
+secureship taint ./my-project --format json -o taint-analysis.json
+```
+
+Taint analysis workflow:
+1. **Sources**: Tracks untrusted input points (`request.args`, `request.form`, `request.json`, `sys.argv`, `req.query`, `req.body`, `req.params`).
+2. **Propagators**: Follows tainted data through variable assignments, string formatting, and concatenations.
+3. **Sanitizers**: Recognizes defense sanitizers (`int()`, `escape()`, `shlex.quote()`, parameterized query bindings).
+4. **Sinks**: Flags untrusted execution in SQL (`execute()`), OS shell (`system()`, `subprocess`), code execution (`eval()`, `exec()`), SSRF (`requests.get()`), and File I/O (`open()`).
+
+---
+
+### ⚙️ CI/CD Supply Chain Security Auditor (`secureship ci-audit`)
+
+Audit GitHub Actions (`.github/workflows/*.yml`) and GitLab CI (`.gitlab-ci.yml`) for supply-chain vulnerabilities:
+
+```bash
+# Audit CI/CD pipelines
+secureship ci-audit ./my-project
+
+# Export pipeline audit JSON
+secureship ci-audit ./my-project --format json
+```
+
+Detected supply-chain vectors:
+- **Pwn-Request Vulnerability (`CICD-GH-001`)**: Identifies `pull_request_target` triggers checking out PR head commits with access to repository secrets.
+- **Unpinned Third-Party Actions (`CICD-GH-002`)**: Detects actions using mutable tags/branches instead of immutable 40-character commit SHAs.
+- **Direct Script Injection (`CICD-GH-003`)**: Flags user-controlled GitHub context expressions (`${{ github.event.issue.title }}`) inside shell `run:` steps.
+- **Overly Permissive GITHUB_TOKEN (`CICD-GH-004`)**: Identifies missing or `write-all` permissions blocks.
+- **Secret Printing (`CICD-GH-005`)**: Flags commands that echo or log pipeline secrets.
+
+---
+
 ### Multi-Format Reporting & Executive Ship Certificates
 
 Export findings in formats suited for developers, CI/CD pipelines, and leadership:
@@ -738,6 +805,9 @@ secureship config --github-token ghp_YourGitHubTokenHere
 | `secureship vault` | Extract hardcoded secrets to `.env.example`, Vault KV, & K8s Secrets |
 | `secureship badge` | Generate dynamic Shields.io-compliant vector SVG status badge |
 | `secureship container` | Deep container & Dockerfile security audit (multi-stage, SUID, ARG) |
+| `secureship license` | Audit third-party dependencies for Open-Source License compliance & legal risk |
+| `secureship taint` | Static taint analysis (source-to-sink dataflow tracking in Python/JS) |
+| `secureship ci-audit` | Audit CI/CD pipeline definitions for supply-chain vulnerabilities |
 | `secureship fix` | Automated auto-remediation engine (preview `--dry-run` or `--apply`) |
 | `secureship sbom` | Generate CycloneDX v1.5 or SPDX v2.3 Software Bill of Materials |
 | `secureship compliance` | Benchmark repository against OWASP, PCI-DSS, SOC 2, or NIST |
@@ -839,9 +909,9 @@ Our test suite covers every scanner, confidence filter, quality gate, CLI comman
 pytest engine/tests -v
 ```
 
-All **75 unit and integration tests pass** with zero errors:
+All **86 unit and integration tests pass** with zero errors:
 ```text
-======================= 75 passed, 1 warning in 23.65s ========================
+======================= 86 passed, 1 warning in 23.17s ========================
 ```
 
 ---

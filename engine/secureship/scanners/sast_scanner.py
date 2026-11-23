@@ -19,7 +19,11 @@ class SASTScanner(BaseScanner):
 
     @property
     def supported_extensions(self) -> Set[str]:
-        return {".py", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".java", ".go"}
+        return {
+            ".py", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs",
+            ".java", ".go", ".c", ".cpp", ".cc", ".cxx", ".h", ".hpp",
+            ".php", ".cs"
+        }
 
     def scan_file(self, file_path: Path, relative_path: str, content: str) -> List[Finding]:
         findings: List[Finding] = []
@@ -33,6 +37,12 @@ class SASTScanner(BaseScanner):
             findings.extend(self._scan_java(file_path, relative_path, content))
         elif ext == ".go":
             findings.extend(self._scan_go(file_path, relative_path, content))
+        elif ext in {".c", ".cpp", ".cc", ".cxx", ".h", ".hpp"}:
+            findings.extend(self._scan_c_cpp(relative_path, content))
+        elif ext == ".php":
+            findings.extend(self._scan_php(relative_path, content))
+        elif ext == ".cs":
+            findings.extend(self._scan_csharp(relative_path, content))
 
         return findings
 
@@ -939,4 +949,259 @@ class SASTScanner(BaseScanner):
                         )
                     )
 
+        return findings
+
+    # =========================================================================
+    # C / C++ SAST
+    # =========================================================================
+
+    def _scan_c_cpp(self, relative_path: str, content: str) -> List[Finding]:
+        findings: List[Finding] = []
+        lines = content.splitlines()
+
+        c_rules = [
+            {
+                "id": "SAST-C-001",
+                "title": "Insecure strcpy/strcat Buffer Overflow",
+                "regex": re.compile(r"\b(strcpy|strcat)\s*\("),
+                "severity": Severity.CRITICAL,
+                "confidence": Confidence.HIGH,
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-120",
+                "desc": "Unbounded string copy function strcpy/strcat does not check destination buffer boundaries, enabling buffer overflows.",
+                "rem": "Replace with bounded functions such as strncpy, snprintf, or strlcpy.",
+                "fix": "strncpy(dest, src, sizeof(dest) - 1)",
+            },
+            {
+                "id": "SAST-C-002",
+                "title": "Dangerous gets() Function Usage",
+                "regex": re.compile(r"\bgets\s*\("),
+                "severity": Severity.CRITICAL,
+                "confidence": Confidence.HIGH,
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-242",
+                "desc": "The gets() function has no buffer limit checks and is fundamentally vulnerable to buffer overflow attacks.",
+                "rem": "Replace gets() with fgets(buffer, sizeof(buffer), stdin).",
+                "fix": "fgets(buffer, sizeof(buffer), stdin)",
+            },
+            {
+                "id": "SAST-C-003",
+                "title": "Format String Vulnerability in printf/sprintf",
+                "regex": re.compile(r"\b(printf|sprintf|fprintf)\s*\(\s*([a-zA-Z0-9_]+)\s*\)"),
+                "severity": Severity.HIGH,
+                "confidence": Confidence.MEDIUM,
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-134",
+                "desc": "Calling printf directly on an unvalidated string argument permits format string attacks (%x, %n).",
+                "rem": "Always pass format string specifiers explicitly: printf(\"%s\", user_str).",
+                "fix": "printf(\"%s\", user_str)",
+            },
+            {
+                "id": "SAST-C-004",
+                "title": "Dangerous system() Command Execution in C/C++",
+                "regex": re.compile(r"\bsystem\s*\("),
+                "severity": Severity.HIGH,
+                "confidence": Confidence.HIGH,
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-78",
+                "desc": "Invoking system() spawns an OS shell and executes input commands, risking command injection.",
+                "rem": "Use execve or posix_spawn with explicit argument vectors instead of invoking the shell.",
+                "fix": "execve(path, argv, envp)",
+            },
+        ]
+
+        for idx, line in enumerate(lines, 1):
+            s_line = line.strip()
+            if not s_line or s_line.startswith(("//", "/*", "*")):
+                continue
+            for rule in c_rules:
+                rule_id = rule["id"]
+                if IgnoreMatcher.is_line_suppressed(line, rule_id):
+                    continue
+                if rule["regex"].search(line):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id=rule_id,
+                            title=rule["title"],
+                            category=FindingCategory.SAST,
+                            severity=rule["severity"],
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line.strip(),
+                            owasp_category=rule["owasp"],
+                            cwe_id=rule["cwe"],
+                            description=rule["desc"],
+                            remediation=rule["rem"],
+                            auto_fix_hint=rule["fix"],
+                            confidence=rule["confidence"],
+                        )
+                    )
+        return findings
+
+    # =========================================================================
+    # PHP SAST
+    # =========================================================================
+
+    def _scan_php(self, relative_path: str, content: str) -> List[Finding]:
+        findings: List[Finding] = []
+        lines = content.splitlines()
+
+        php_rules = [
+            {
+                "id": "SAST-PHP-001",
+                "title": "Arbitrary Code Execution in eval()",
+                "regex": re.compile(r"\beval\s*\(\s*\$"),
+                "severity": Severity.CRITICAL,
+                "confidence": Confidence.HIGH,
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-95",
+                "desc": "eval() evaluates arbitrary PHP code at runtime, permitting immediate remote code execution if input is attacker-influenced.",
+                "rem": "Refactor logic to eliminate eval(); parse data using json_decode.",
+                "fix": "json_decode($input, true)",
+            },
+            {
+                "id": "SAST-PHP-002",
+                "title": "Remote / Local File Inclusion in include/require",
+                "regex": re.compile(r"\b(include|require|include_once|require_once)\s*[\(\s]*\$(?:_GET|_POST|_REQUEST|[a-zA-Z0-9_]+)"),
+                "severity": Severity.CRITICAL,
+                "confidence": Confidence.HIGH,
+                "owasp": "A01:2021-Broken Access Control",
+                "cwe": "CWE-98",
+                "desc": "Dynamic include/require with variable paths allows attackers to include arbitrary local files or execute remote PHP code.",
+                "rem": "Use an explicit allowlist of filenames or strictly restrict paths with basename().",
+                "fix": "include basename($page) . '.php'",
+            },
+            {
+                "id": "SAST-PHP-003",
+                "title": "Insecure PHP Object Deserialization in unserialize()",
+                "regex": re.compile(r"\bunserialize\s*\("),
+                "severity": Severity.HIGH,
+                "confidence": Confidence.HIGH,
+                "owasp": "A08:2021-Software and Data Integrity Failures",
+                "cwe": "CWE-502",
+                "desc": "unserialize() triggers magic methods (__wakeup, __destruct) that can execute arbitrary gadget chains.",
+                "rem": "Use json_decode() for data serialization instead of unserialize().",
+                "fix": "json_decode($data, true)",
+            },
+            {
+                "id": "SAST-PHP-004",
+                "title": "SQL Injection in mysqli_query() Concatenation",
+                "regex": re.compile(r"(mysqli_query|mysql_query)\s*\([^,]+,\s*[\"'].*\$"),
+                "severity": Severity.CRITICAL,
+                "confidence": Confidence.HIGH,
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-89",
+                "desc": "SQL statement built using string interpolation inside mysqli_query().",
+                "rem": "Use prepared statements with PDO or mysqli_prepare().",
+                "fix": "$stmt = $mysqli->prepare('SELECT * FROM t WHERE id = ?'); $stmt->bind_param('i', $id);",
+            },
+        ]
+
+        for idx, line in enumerate(lines, 1):
+            s_line = line.strip()
+            if not s_line or s_line.startswith(("//", "#", "/*", "*")):
+                continue
+            for rule in php_rules:
+                rule_id = rule["id"]
+                if IgnoreMatcher.is_line_suppressed(line, rule_id):
+                    continue
+                if rule["regex"].search(line):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id=rule_id,
+                            title=rule["title"],
+                            category=FindingCategory.SAST,
+                            severity=rule["severity"],
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line.strip(),
+                            owasp_category=rule["owasp"],
+                            cwe_id=rule["cwe"],
+                            description=rule["desc"],
+                            remediation=rule["rem"],
+                            auto_fix_hint=rule["fix"],
+                            confidence=rule["confidence"],
+                        )
+                    )
+        return findings
+
+    # =========================================================================
+    # C# / .NET SAST
+    # =========================================================================
+
+    def _scan_csharp(self, relative_path: str, content: str) -> List[Finding]:
+        findings: List[Finding] = []
+        lines = content.splitlines()
+
+        cs_rules = [
+            {
+                "id": "SAST-CS-001",
+                "title": "Insecure BinaryFormatter Deserialization",
+                "regex": re.compile(r"BinaryFormatter\s*\(\s*\)|new\s+BinaryFormatter"),
+                "severity": Severity.CRITICAL,
+                "confidence": Confidence.HIGH,
+                "owasp": "A08:2021-Software and Data Integrity Failures",
+                "cwe": "CWE-502",
+                "desc": "BinaryFormatter is fundamentally dangerous in .NET and can lead to arbitrary remote code execution.",
+                "rem": "Migrate from BinaryFormatter to System.Text.Json or XmlSerializer with explicit types.",
+                "fix": "JsonSerializer.Deserialize<T>(jsonString)",
+            },
+            {
+                "id": "SAST-CS-002",
+                "title": "SQL Injection in SqlCommand String Interpolation",
+                "regex": re.compile(r"new\s+SqlCommand\s*\(\s*(\$\"|string\.Format)"),
+                "severity": Severity.CRITICAL,
+                "confidence": Confidence.HIGH,
+                "owasp": "A03:2021-Injection",
+                "cwe": "CWE-89",
+                "desc": "SqlCommand constructed using string interpolation or format concatenation.",
+                "rem": "Use parameterized queries with command.Parameters.AddWithValue().",
+                "fix": "cmd.Parameters.AddWithValue(\"@id\", id)",
+            },
+            {
+                "id": "SAST-CS-003",
+                "title": "Weak Pseudo-Random Number Generator in Security Context",
+                "regex": re.compile(r"new\s+Random\s*\("),
+                "severity": Severity.MEDIUM,
+                "confidence": Confidence.LOW,
+                "owasp": "A02:2021-Cryptographic Failures",
+                "cwe": "CWE-338",
+                "desc": "System.Random is a linear congruential generator unsuitable for cryptographically sensitive numbers or tokens.",
+                "rem": "Use System.Security.Cryptography.RandomNumberGenerator for security-critical random generation.",
+                "fix": "RandomNumberGenerator.GetBytes(buffer)",
+            },
+        ]
+
+        for idx, line in enumerate(lines, 1):
+            s_line = line.strip()
+            if not s_line or s_line.startswith(("//", "/*", "*")):
+                continue
+            for rule in cs_rules:
+                rule_id = rule["id"]
+                if IgnoreMatcher.is_line_suppressed(line, rule_id):
+                    continue
+                if rule["regex"].search(line):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id=rule_id,
+                            title=rule["title"],
+                            category=FindingCategory.SAST,
+                            severity=rule["severity"],
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line.strip(),
+                            owasp_category=rule["owasp"],
+                            cwe_id=rule["cwe"],
+                            description=rule["desc"],
+                            remediation=rule["rem"],
+                            auto_fix_hint=rule["fix"],
+                            confidence=rule["confidence"],
+                        )
+                    )
         return findings

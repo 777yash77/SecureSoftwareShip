@@ -503,4 +503,50 @@ class IaCScanner(BaseScanner):
                         )
                     )
 
+            # IAC-TF-004: Publicly accessible database instance
+            if not IgnoreMatcher.is_line_suppressed(line_stripped, "IAC-TF-004"):
+                if re.search(r'publicly_accessible\s*=\s*true\b', line_stripped, re.IGNORECASE):
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id="IAC-TF-004",
+                            title="Publicly Accessible Relational Database Instance",
+                            category=FindingCategory.IAC,
+                            severity=Severity.CRITICAL,
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line_stripped,
+                            owasp_category="A01:2021-Broken Access Control",
+                            cwe_id="CWE-284",
+                            description="RDS instance is configured with publicly_accessible = true, giving it a public IP address directly resolvable from the Internet.",
+                            remediation="Set publicly_accessible = false and deploy databases in private VPC subnets behind a bastion or NAT gateway.",
+                            auto_fix_hint="publicly_accessible = false",
+                            confidence=Confidence.HIGH,
+                        )
+                    )
+
+            # IAC-TF-005: Wildcard administrator permissions in IAM policy
+            if not IgnoreMatcher.is_line_suppressed(line_stripped, "IAC-TF-005"):
+                if re.search(r'(?i)actions?\s*=\s*\[?\s*["\']\*["\']\s*\]?', line_stripped) and "Allow" in content:
+                    findings.append(
+                        Finding(
+                            id=str(uuid.uuid4()),
+                            rule_id="IAC-TF-005",
+                            title="Overly Permissive IAM Policy with Wildcard Action (*)",
+                            category=FindingCategory.IAC,
+                            severity=Severity.HIGH,
+                            file_path=relative_path,
+                            line_start=idx,
+                            line_end=idx,
+                            code_snippet=line_stripped,
+                            owasp_category="A01:2021-Broken Access Control",
+                            cwe_id="CWE-250",
+                            description="IAM policy grants unrestricted wildcard action ('*') with Allow effect, violating the principle of least privilege.",
+                            remediation="Specify explicit required IAM actions (e.g. ['s3:GetObject', 's3:PutObject']) instead of wildcard '*'.",
+                            auto_fix_hint="Action = [\"s3:GetObject\"]",
+                            confidence=Confidence.HIGH,
+                        )
+                    )
+
         return findings

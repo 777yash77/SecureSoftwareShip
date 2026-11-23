@@ -238,6 +238,16 @@ AUTOMATED REMEDIATION & ENTERPRISE TOOLS:
   secureship container ./Dockerfile
   secureship container ./my-project
 
+  # Open-Source License compliance & legal risk audit:
+  secureship license ./my-project --policy commercial
+  secureship license ./my-project --policy strict
+
+  # Static taint analysis (source-to-sink dataflow tracking):
+  secureship taint ./my-project
+
+  # CI/CD supply chain & workflow security auditor:
+  secureship ci-audit ./my-project
+
   # Safe auto-remediation (preview dry-run diffs):
   secureship fix ./my-project --dry-run
   # Apply code and IaC fixes in-place:

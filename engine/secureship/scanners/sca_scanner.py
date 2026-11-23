@@ -12,6 +12,7 @@ import httpx
 from secureship.models import Confidence, Finding, FindingCategory, Severity
 from secureship.scanners.base import BaseScanner
 from secureship.scorer import IgnoreMatcher
+from secureship.cve_database import lookup_cve_offline
 
 
 # Built-in fallback database for offline scanning or API timeouts
@@ -431,6 +432,10 @@ class SCAScanner(BaseScanner):
                 if is_version_vulnerable(ver, known["max_vulnerable"]):
                     # Built-in detailed data takes precedence or enriches
                     vuln_info = known
+            if not vuln_info:
+                offline_match = lookup_cve_offline(eco.lower(), name.lower(), ver)
+                if offline_match:
+                    vuln_info = offline_match
 
             if vuln_info:
                 rule_id = f"SCA-{vuln_info['cve'].replace('-', '')[:10]}"

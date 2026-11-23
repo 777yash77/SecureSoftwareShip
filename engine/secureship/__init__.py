@@ -2,15 +2,18 @@
 
 from secureship.badge import BadgeGenerator
 from secureship.ci_generator import CIGenerator
+from secureship.ci_cd_auditor import CICDAuditor
 from secureship.compliance import ComplianceEngine
 from secureship.container_auditor import ContainerAuditor
 from secureship.git_scanner import GitHistoryScanner
+from secureship.license_checker import LicenseAuditor
 from secureship.models import Finding, FindingCategory, ScanResult, Severity, ShipStatus
 from secureship.protector import SecretProtector
 from secureship.remediator import RemediationEngine
 from secureship.sbom import SBOMGenerator
 from secureship.scanner import SecureShipEngine
 from secureship.scorer import Scorer
+from secureship.taint_analyzer import TaintAnalyzer
 from secureship.threat_model import ThreatModelingEngine
 from secureship.vault import VaultMigrator
 
@@ -34,4 +37,7 @@ __all__ = [
     "VaultMigrator",
     "BadgeGenerator",
     "ContainerAuditor",
+    "LicenseAuditor",
+    "TaintAnalyzer",
+    "CICDAuditor",
 ]
