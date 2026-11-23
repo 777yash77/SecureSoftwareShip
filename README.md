@@ -21,14 +21,25 @@
 - [Core Engine Mechanics & How It Works](#-core-engine-mechanics--how-it-works)
   - [Recursive Tree Traversal & Parallel Worker Pool](#recursive-tree-traversal--parallel-worker-pool)
   - [AST-Level SQL Injection Detection & Remediation](#ast-level-sql-injection-detection--remediation)
-  - [4-Tier Security Inspection Domains (35+ Rules)](#4-tier-security-inspection-domains-35-rules)
+  - [Multi-Tier Security Inspection Domains (50+ Rules)](#4-tier-security-inspection-domains-35-rules)
   - [High-Accuracy Confidence & False-Positive Elimination](#high-accuracy-confidence--false-positive-elimination)
   - [Objective Security Scoring (0–100) & Gate Verdicts](#objective-security-scoring-0100--gate-verdicts)
   - [Custom Quality Gates & Strict Zero-Tolerance Policies](#custom-quality-gates--strict-zero-tolerance-policies)
   - [Automated Shift-Left Git Pre-Commit & Pre-Push Gates](#automated-shift-left-git-pre-commit--pre-push-gates)
+  - [Secret Shield & .gitignore Immunization (`secureship protect`)](#3-automatic-gitignore-secret-immunization-secret-shield)
   - [Audited Emergency Production Bypass](#audited-emergency-production-bypass)
   - [Persistent SQLite Scan History](#persistent-sqlite-scan-history)
   - [Exploit Intelligence & Patch Guidance Engine](#exploit-intelligence--patch-guidance-engine)
+- [Enterprise DevSecOps Capabilities](#-enterprise-devsecops-capabilities)
+  - [Automated Auto-Remediation Engine (`secureship fix`)](#-automated-auto-remediation-engine-secureship-fix)
+  - [Software Bill of Materials (SBOM) Generation (`secureship sbom`)](#-software-bill-of-materials-sbom-generation-secureship-sbom)
+  - [Regulatory & Compliance Benchmarking (`secureship compliance`)](#-regulatory--compliance-benchmarking-secureship-compliance)
+  - [Shift-Left CI/CD Pipeline Generator (`secureship init-ci`)](#-shift-left-cicd-pipeline-generator-secureship-init-ci)
+  - [Automated STRIDE Threat Modeling (`secureship threat-model`)](#-automated-stride-threat-modeling-secureship-threat-model)
+  - [Git Commit History Secret Scanner (`secureship git-history`)](#-git-commit-history-secret-scanner-secureship-git-history)
+  - [Secret Vault & Environment Migrator (`secureship vault`)](#-secret-vault--environment-migrator-secureship-vault)
+  - [Dynamic README Security Badge Generator (`secureship badge`)](#-dynamic-readme-security-badge-generator-secureship-badge)
+  - [Deep Container Security Inspector (`secureship container`)](#-deep-container--dockerfile-security-inspector-secureship-container)
   - [Multi-Format Reporting & Executive Ship Certificates](#multi-format-reporting--executive-ship-certificates)
   - [Seamless Self-Updating from GitHub](#seamless-self-updating-from-github)
 - [CLI Reference Manual](#-cli-reference-manual)
@@ -62,8 +73,8 @@ flowchart TD
     subgraph Interfaces ["Developer Interfaces"]
         IDE["VS Code Extension\n(Real-time Diagnostics & Quick Fixes)"]
         GIT["Git Shift-Left Gates\n(pre-commit & pre-push hooks)"]
-        CLI["Terminal CLI\n(secureship scan, config, update)"]
-        DASH["Web Dashboard\n(React 18 + Vite + Tailwind CSS)"]
+        CLI["Terminal CLI\n(secureship scan, fix, protect, threat-model)"]
+        DASH["Web Security Dashboard\n(React 18 + Vite + Tailwind CSS)"]
     end
 
     subgraph ServiceLayer ["Service Layer"]
@@ -71,22 +82,31 @@ flowchart TD
     end
 
     subgraph CoreEngine ["SecureShip Core Engine (Python 3.10+)"]
-        ORCH["Parallel Orchestrator\n(ThreadPoolExecutor)"]
-        SCORER["Scoring & Quality Gate Algorithm\n(0–100 Score | READY / REVIEW / BLOCKED)"]
+        ORCH["Parallel Multi-Threaded Orchestrator\n(ThreadPoolExecutor)"]
+        SCORER["Quality Gate & Scoring Algorithm\n(0–100 Score | READY / REVIEW / BLOCKED)"]
         CONF["Confidence & False-Positive Filter\n(High / Medium / Low)"]
         SQLITE[("SQLite Audit Store\n(~/.secureship/history.db)")]
-        ADVISOR["Exploit Intelligence Engine\n(Adversary Scenarios & Patches)"]
+        ADVISOR["Exploit Intelligence & AI Advisor\n(Exploit Scenarios & Defenses)"]
 
-        subgraph ModularScanners ["4 Security Inspection Domains (35+ Rules)"]
-            S1["Secrets & Tokens\n(Shannon Entropy + Pattern Matchers)"]
-            S2["SAST Code Analysis\n(Python AST + JS/Node AST)"]
-            S3["Dependency / SCA\n(OSV.dev Batch API + Offline CVE DB)"]
-            S4["Container & IaC\n(Dockerfile, Compose, Kubernetes)"]
+        subgraph ModularScanners ["Multi-Tier Inspection Domains (50+ Rules)"]
+            S1["Secrets & Shannon Entropy\n(API Keys, Cloud Tokens, DB Strings)"]
+            S2["Multi-Language SAST Engine\n(Python AST, JS/TS, Java, Go)"]
+            S3["Software Supply Chain / SCA\n(OSV.dev Batch API + Offline CVE DB)"]
+            S4["IaC & Container Security\n(Dockerfile, Compose, K8s, Terraform)"]
+        end
+
+        subgraph EnterpriseModules ["Enterprise DevSecOps Suite"]
+            E1["Secret Shield & .gitignore\n(Auto-immunization & Cache Unstaging)"]
+            E2["STRIDE Threat Modeling\n(Ports, Endpoints, Threat Risk Matrix)"]
+            E3["Git History Secret Scanner\n(Git Log Diff Audit & BFG Purge)"]
+            E4["Secret Vault Migrator\n(.env.example, Vault KV, K8s Secret)"]
+            E5["Auto-Remediation Engine\n(Safe In-Place AST & IaC Patches)"]
+            E6["SBOM & Compliance\n(CycloneDX, SPDX, OWASP, PCI-DSS, SOC 2, NIST)"]
         end
     end
 
     IDE -->|"HTTP /api/scan/content"| API
-    DASH -->|"HTTP /api/scans & /api/history"| API
+    DASH -->|"HTTP REST API Endpoints"| API
     GIT -->|"CLI Execution"| CLI
     CLI -->|"Direct Internal Call"| ORCH
     API -->|"Direct Internal Call"| ORCH
@@ -100,6 +120,7 @@ flowchart TD
     CONF --> SCORER
     SCORER --> SQLITE
     SCORER --> ADVISOR
+    SCORER --> EnterpriseModules
     SCORER -->|"ScanResult & Metrics"| ORCH
 ```
 
@@ -458,6 +479,8 @@ Renders 3 structured analysis panels:
 3. **Remediation Strategy & Defensive Patch**: Copy-paste, syntax-highlighted code patches.
 
 ---
+
+## 🚀 Enterprise DevSecOps Capabilities
 
 ### 🔧 Automated Auto-Remediation Engine (`secureship fix`)
 

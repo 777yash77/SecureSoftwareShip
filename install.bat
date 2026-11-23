@@ -32,7 +32,7 @@ if %ERRORLEVEL% EQU 0 (
     echo.
     echo Optional VS Code Extension:
     echo   In VS Code, press Ctrl+Shift+P -^> "Install from VSIX..."
-    echo   and select vscode-extension\secureship-vscode-1.0.0.vsix
+    echo   and select secureship-vscode-1.0.0.vsix
     echo.
 ) else (
     echo.

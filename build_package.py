@@ -49,6 +49,12 @@ def build_release_package():
         shutil.copy2(vsix_src, staging_dir / "secureship-vscode-1.0.0.vsix")
         print("[+] Copied secureship-vscode-1.0.0.vsix")
 
+    # 4b. Copy compiled Web Dashboard dist
+    dash_dist = repo_root / "dashboard" / "dist"
+    if dash_dist.exists():
+        shutil.copytree(dash_dist, staging_dir / "dashboard" / "dist")
+        print("[+] Copied compiled Web Dashboard dist/ for instant UI access")
+
     # 5. Copy demo-vulnerable-app
     demo_src = repo_root / "demo-vulnerable-app"
     if demo_src.exists():

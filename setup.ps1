@@ -48,5 +48,8 @@ Write-Host "Try running:" -ForegroundColor White
 Write-Host "  secureship --help" -ForegroundColor Cyan
 Write-Host "  secureship scan demo-vulnerable-app" -ForegroundColor Cyan
 Write-Host "  secureship scan demo-vulnerable-app --modify-score 65" -ForegroundColor Cyan
-Write-Host "  secureship scan demo-vulnerable-app --strict-sca" -ForegroundColor Cyan
+Write-Host "  secureship protect ." -ForegroundColor Cyan
+Write-Host "  secureship threat-model demo-vulnerable-app" -ForegroundColor Cyan
+Write-Host "  secureship fix demo-vulnerable-app --dry-run" -ForegroundColor Cyan
+Write-Host "  secureship serve --port 8787" -ForegroundColor Cyan
 Write-Host ""
