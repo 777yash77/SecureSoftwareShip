@@ -17,9 +17,12 @@ from pydantic import BaseModel
 
 
 from secureship.advisor import AdvisorResponse, SecurityAdvisor
+from secureship.badge import BadgeGenerator
 from secureship.ci_generator import CIGenerator
 from secureship.compliance import ComplianceEngine
+from secureship.container_auditor import ContainerAuditor
 from secureship.db import HistoryDB
+from secureship.git_scanner import GitHistoryScanner
 from secureship.models import Finding, ScanRequest, ScanResult, Severity
 from secureship.protector import SecretProtector
 from secureship.remediator import RemediationEngine
@@ -29,6 +32,8 @@ from secureship.reporters.json_reporter import render_json_report
 from secureship.reporters.sarif_reporter import render_sarif_report
 from secureship.sbom import SBOMGenerator
 from secureship.scanner import SecureShipEngine
+from secureship.threat_model import ThreatModelingEngine
+from secureship.vault import VaultMigrator
 
 
 app = FastAPI(
@@ -301,6 +306,61 @@ def protect_gitignore_endpoint(req: ProtectRequest) -> Dict[str, Any]:
     target = Path(req.path).resolve()
     protector = SecretProtector(str(target))
     return protector.protect(target_dir=target, auto_unstage=req.unstage)
+
+
+@app.get("/api/threat-model")
+def get_threat_model(path: str = Query(".", description="Target repository path")) -> Dict[str, Any]:
+    """Generates STRIDE threat model and attack surface matrix."""
+    target = Path(path).resolve()
+    engine = ThreatModelingEngine(str(target))
+    rep = engine.analyze(target)
+    return ThreatModelingEngine.report_to_dict(rep)
+
+
+@app.get("/api/git-history")
+def get_git_history(
+    path: str = Query(".", description="Target Git repository"),
+    commits: int = Query(50, description="Max commits to scan"),
+    branch: Optional[str] = Query(None, description="Branch to scan"),
+) -> List[Dict[str, Any]]:
+    """Scans Git commit history for leaked credentials and API tokens."""
+    target = Path(path).resolve()
+    scanner = GitHistoryScanner(str(target))
+    findings = scanner.scan_history(repo_dir=target, max_commits=commits, branch=branch)
+    return GitHistoryScanner.findings_to_dict(findings)
+
+
+@app.post("/api/vault")
+def export_vault(path: str = Query(".", description="Target repository path")) -> Dict[str, Any]:
+    """Extracts secrets and exports .env.example, HashiCorp Vault, and K8s secret payloads."""
+    target = Path(path).resolve()
+    engine = SecureShipEngine(str(target), categories=[FindingCategory.SECRETS])
+    result = engine.scan()
+    migrator = VaultMigrator(str(target))
+    return migrator.export(result.findings)
+
+
+@app.get("/api/badge.svg")
+def get_badge(
+    scan_id: Optional[str] = Query(None),
+) -> Response:
+    """Returns dynamic Shields.io-compliant SVG security status badge."""
+    target_scan = _resolve_scan(scan_id)
+    svg = BadgeGenerator.generate_svg(target_scan.summary.security_score, target_scan.summary.ship_status.value)
+    return Response(content=svg, media_type="image/svg+xml")
+
+
+@app.get("/api/container")
+def get_container_audit(path: str = Query(".", description="Target directory or Dockerfile")) -> List[Dict[str, Any]]:
+    """Deep container security inspection: multi-stage builds, SUID permissions, ARG secrets."""
+    target = Path(path).resolve()
+    auditor = ContainerAuditor(str(target))
+    if target.is_file():
+        content = target.read_text(encoding="utf-8", errors="replace")
+        findings = auditor.audit_file(target, target.name, content)
+    else:
+        findings = auditor.audit_directory(target)
+    return ContainerAuditor.findings_to_dict(findings)
 
 
 @app.get("/api/sbom")

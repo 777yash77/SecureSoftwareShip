@@ -19,10 +19,13 @@ from rich.text import Text
 from rich.syntax import Syntax
 
 from secureship.advisor import EXPERT_KNOWLEDGE_BASE, SecurityAdvisor
+from secureship.badge import BadgeGenerator
 from secureship.ci_generator import CIGenerator
 from secureship.compliance import ComplianceEngine
 from secureship.config import load_config, save_config
+from secureship.container_auditor import ContainerAuditor
 from secureship.db import HistoryDB
+from secureship.git_scanner import GitHistoryScanner
 from secureship.models import Confidence, Finding, FindingCategory, Severity, ShipStatus
 from secureship.protector import SecretProtector
 from secureship.remediator import RemediationEngine
@@ -33,7 +36,9 @@ from secureship.reporters.json_reporter import render_json_report
 from secureship.reporters.sarif_reporter import render_sarif_report
 from secureship.sbom import SBOMGenerator
 from secureship.scanner import SecureShipEngine
+from secureship.threat_model import ThreatModelingEngine
 from secureship.updater import run_self_update
+from secureship.vault import VaultMigrator
 
 console = Console()
 
@@ -78,6 +83,12 @@ Audit and evaluate codebases for hardcoded secrets, AST-based SAST code flaws, v
   [cyan]secureship sbom ./my-project[/cyan]                 Generate CycloneDX 1.5 / SPDX 2.3 Software Bill of Materials
   [cyan]secureship compliance ./my-project[/cyan]           Audit OWASP Top 10, PCI-DSS, SOC 2, and NIST compliance
   [cyan]secureship init-ci --platform github[/cyan]         Generate automated CI/CD pipeline workflow (GitHub/GitLab/Azure)
+  [cyan]secureship protect[/cyan]                           Auto-protect .env, DB credentials & keys in .gitignore
+  [cyan]secureship threat-model ./my-project[/cyan]          Generate STRIDE attack surface & threat vector matrix
+  [cyan]secureship git-history[/cyan]                       Scan past Git commits for leaked credentials & API keys
+  [cyan]secureship vault ./my-project -o ./vault[/cyan]     Migrate secrets to .env.example, HashiCorp Vault, & K8s
+  [cyan]secureship badge -o badge.svg[/cyan]                Generate shields-compliant SVG security badge for README
+  [cyan]secureship container ./Dockerfile[/cyan]            Deep container audit: multi-stage, SUID, ARG secrets
   [cyan]secureship serve --port 8787[/cyan]                  Launch Web Security Dashboard on port 8787
   [cyan]secureship version[/cyan]                            Display installed SecureShip version
 """
@@ -1105,6 +1116,180 @@ def init_ci(
     except ValueError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2)
+
+
+@app.command(name="threat-model")
+def threat_model(
+    path: str = typer.Argument(".", help="Target repository directory to analyze"),
+    format: str = typer.Option("table", "--format", "-f", help="Output format: table or json"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Save threat model report to file path"),
+) -> None:
+    """Generate STRIDE threat model matrix and attack surface analysis."""
+    target = Path(path).resolve()
+    engine = ThreatModelingEngine(str(target))
+    rep = engine.analyze(target)
+
+    if format.lower() == "json":
+        data = ThreatModelingEngine.report_to_dict(rep)
+        json_str = json.dumps(data, indent=2)
+        if output:
+            Path(output).write_text(json_str, encoding="utf-8")
+            typer.secho(f"✅ Threat model report saved to: {output}", fg=typer.colors.GREEN)
+        else:
+            print(json_str)
+        return
+
+    # Render rich summary
+    typer.secho(f"\n🧠 STRIDE Threat Model & Attack Surface: {rep.project_name}", fg=typer.colors.CYAN, bold=True)
+    typer.echo(f"   • Discovered Entrypoints:   {len(rep.entrypoints)}")
+    typer.echo(f"   • Connected Datastores:     {', '.join(rep.datastores) if rep.datastores else 'None detected'}")
+    typer.echo(f"   • Exposed Network Ports:    {', '.join(rep.exposed_ports) if rep.exposed_ports else 'None exposed'}\n")
+
+    table = Table(title="STRIDE Threat Vector Matrix", border_style="cyan")
+    table.add_column("Category", style="bold yellow", width=22)
+    table.add_column("Threat Title", style="bold white")
+    table.add_column("Risk", width=10)
+    table.add_column("Affected Asset", style="cyan")
+
+    for t in rep.threats:
+        risk_color = "[bold red]CRITICAL[/bold red]" if t.risk_level == "CRITICAL" else "[red]HIGH[/red]" if t.risk_level == "HIGH" else "[yellow]MEDIUM[/yellow]"
+        table.add_row(t.category, t.title, risk_color, t.affected_asset)
+
+    console.print(table)
+    typer.secho(f"\n📊 Threat Summary: {rep.total_threats} Total Threat Vectors ({rep.high_risk_count} High/Critical Risk)\n", fg=typer.colors.YELLOW if rep.high_risk_count > 0 else typer.colors.GREEN, bold=True)
+
+    if output:
+        out_file = Path(output).resolve()
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+        out_file.write_text(json.dumps(ThreatModelingEngine.report_to_dict(rep), indent=2), encoding="utf-8")
+        typer.secho(f"✅ Threat model saved to: {out_file}", fg=typer.colors.GREEN)
+
+
+@app.command(name="git-history")
+def git_history(
+    path: str = typer.Argument(".", help="Target Git repository directory"),
+    commits: int = typer.Option(50, "--commits", "-n", help="Number of historical commits to inspect"),
+    branch: Optional[str] = typer.Option(None, "--branch", "-b", help="Specific Git branch to inspect"),
+) -> None:
+    """Scan Git commit history for leaked secrets, API keys, and passwords."""
+    target = Path(path).resolve()
+    scanner = GitHistoryScanner(str(target))
+
+    typer.secho(f"\n🔍 SecureShip: Auditing Git commit history ({commits} commits)...", fg=typer.colors.CYAN, bold=True)
+    findings = scanner.scan_history(repo_dir=target, max_commits=commits, branch=branch)
+
+    if not findings:
+        typer.secho(f"✅ No historical secrets or credentials detected across the last {commits} commits!", fg=typer.colors.GREEN, bold=True)
+        return
+
+    table = Table(title="⚠️  Detected Historical Secret Leaks in Git Log", border_style="red")
+    table.add_column("Commit", style="bold yellow", width=10)
+    table.add_column("Author", style="white", width=18)
+    table.add_column("Rule & Type", style="cyan")
+    table.add_column("File & Line", style="white")
+    table.add_column("Redacted Secret", style="bold red")
+
+    for f in findings:
+        table.add_row(f.commit_sha, f.author[:18], f"{f.rule_id}\n{f.secret_type}", f"{f.file_path}:{f.line_number}", f.redacted_secret[:30])
+
+    console.print(table)
+    typer.secho(f"\n❌ [CRITICAL]: Found {len(findings)} leaked secret(s) in commit history!", fg=typer.colors.RED, bold=True)
+    typer.echo("Remediation: Purge credentials from git history using 'git filter-repo' or BFG Repo-Cleaner:")
+    for f in findings[:3]:
+        typer.echo(f"   • {f.remediation_cmd}")
+    typer.echo()
+
+
+@app.command()
+def vault(
+    path: str = typer.Argument(".", help="Target repository directory"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Directory to export sanitized .env.example, vault.json, and k8s secrets"),
+) -> None:
+    """Extract hardcoded secrets and generate .env.example, HashiCorp Vault, and K8s Secret payloads."""
+    target = Path(path).resolve()
+    engine = SecureShipEngine(str(target), categories=[FindingCategory.SECRETS])
+    result = engine.scan()
+
+    migrator = VaultMigrator(str(target))
+    data = migrator.export(result.findings, out_dir=Path(output) if output else target)
+
+    typer.secho(f"\n🔐 SecureShip Secret Vault & Environment Migrator", fg=typer.colors.CYAN, bold=True)
+    typer.echo(f"   Target: {target}")
+    typer.echo(f"   Secrets Extracted: {data['secret_count']}\n")
+
+    if data["secret_count"] == 0:
+        typer.secho("✅ No hardcoded secrets detected to migrate.", fg=typer.colors.GREEN)
+        return
+
+    if output:
+        out_dir = Path(output).resolve()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / ".env.example").write_text(data["env_example"], encoding="utf-8")
+        (out_dir / "vault-secrets.json").write_text(json.dumps(data["vault_json"], indent=2), encoding="utf-8")
+        (out_dir / "k8s-secret.yaml").write_text(data["k8s_yaml"], encoding="utf-8")
+        typer.secho(f"✅ Generated vault artifacts in: {out_dir}", fg=typer.colors.GREEN, bold=True)
+        typer.echo("   • .env.example (Sanitized 12-factor template)")
+        typer.echo("   • vault-secrets.json (HashiCorp Vault KV payload)")
+        typer.echo("   • k8s-secret.yaml (Kubernetes Secret manifest)")
+    else:
+        typer.secho("─── Generated .env.example ───", fg=typer.colors.YELLOW)
+        print(data["env_example"])
+        typer.echo("💡 Pass -o ./vault-export to save HashiCorp Vault JSON and K8s YAML manifests.\n")
+
+
+@app.command()
+def badge(
+    path: str = typer.Argument(".", help="Target repository directory"),
+    output: str = typer.Option("security-badge.svg", "--output", "-o", help="Output SVG badge file path"),
+) -> None:
+    """Generate dynamic Shields-compliant SVG security status badge for repository README."""
+    target = Path(path).resolve()
+    engine = SecureShipEngine(str(target))
+    res = engine.scan()
+
+    svg_content = BadgeGenerator.generate_svg(res.summary.security_score, res.summary.ship_status.value)
+    out_file = Path(output).resolve()
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+    out_file.write_text(svg_content, encoding="utf-8")
+
+    score_color = typer.colors.GREEN if res.summary.security_score >= 80 else typer.colors.RED
+    typer.secho(f"\n🛡️  Generated Security Badge: {out_file}", fg=score_color, bold=True)
+    typer.echo(f"   Score: {res.summary.security_score}/100 | Status: {res.summary.ship_status.value}")
+    typer.echo(f"   Embed in README.md: ![{res.summary.ship_status.value}]({output})\n")
+
+
+@app.command()
+def container(
+    path: str = typer.Argument(".", help="Target Dockerfile or directory containing Dockerfiles"),
+) -> None:
+    """Deep container security inspection: multi-stage builds, SUID permissions, ARG secrets, and cache bloat."""
+    target = Path(path).resolve()
+    auditor = ContainerAuditor(str(target))
+
+    if target.is_file():
+        content = target.read_text(encoding="utf-8", errors="replace")
+        findings = auditor.audit_file(target, target.name, content)
+    else:
+        findings = auditor.audit_directory(target)
+
+    typer.secho(f"\n🐳 SecureShip Container Image Inspector: {target.name}", fg=typer.colors.CYAN, bold=True)
+
+    if not findings:
+        typer.secho("✅ Container configurations adhere to production hardening best practices!", fg=typer.colors.GREEN, bold=True)
+        return
+
+    table = Table(title="Container Security Hardening Findings", border_style="cyan")
+    table.add_column("Rule ID", style="bold white", width=15)
+    table.add_column("Title", style="white")
+    table.add_column("Severity", width=10)
+    table.add_column("File:Line", style="cyan")
+
+    for f in findings:
+        sev_color = "[red]HIGH[/red]" if f.severity == "HIGH" else "[yellow]MEDIUM[/yellow]" if f.severity == "MEDIUM" else "[dim]LOW[/dim]"
+        table.add_row(f.rule_id, f.title, sev_color, f"{f.file_path}:{f.line_number}")
+
+    console.print(table)
+    typer.secho(f"\n💡 Detected {len(findings)} container hardening recommendation(s).\n", fg=typer.colors.YELLOW)
 
 
 @app.command()

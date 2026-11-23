@@ -212,6 +212,26 @@ SAVE AS PERMANENT REPO POLICY (.secureshiprc or ~/.secureship/config.json):
   secureship config --show
 
 AUTOMATED REMEDIATION & ENTERPRISE TOOLS:
+  # Auto-protect repository .gitignore from secret leaks & unstage credentials:
+  secureship protect .
+
+  # Automated STRIDE threat modeling & risk matrix:
+  secureship threat-model ./my-project
+  secureship threat-model ./my-project --format json -o threat-model.json
+
+  # Audit git commit history for leaked secrets & purge guidance:
+  secureship git-history ./my-project --commits 50
+
+  # Migrate discovered hardcoded secrets to .env.example, HashiCorp Vault, & K8s:
+  secureship vault ./my-project -o ./vault-output
+
+  # Generate dynamic SVG security status badge for repository README:
+  secureship badge ./my-project -o security-badge.svg
+
+  # Deep container & Dockerfile security inspection:
+  secureship container ./Dockerfile
+  secureship container ./my-project
+
   # Safe auto-remediation (preview dry-run diffs):
   secureship fix ./my-project --dry-run
   # Apply code and IaC fixes in-place:

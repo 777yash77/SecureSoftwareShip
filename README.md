@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-50%2F50%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-75%2F75%20passed-brightgreen.svg)]()
 [![Code Format](https://img.shields.io/badge/SARIF-v2.1.0%20OASIS-orange.svg)]()
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
@@ -538,6 +538,107 @@ secureship init-ci --all
 
 ---
 
+### 🎯 Automated STRIDE Threat Modeling (`secureship threat-model`)
+
+Automatically analyze repository architecture, exposed service ports, endpoints, external databases, and generate an executive STRIDE threat model:
+
+```bash
+# Generate interactive terminal STRIDE threat matrix
+secureship threat-model ./my-project
+
+# Export machine-readable JSON threat model for enterprise risk registers
+secureship threat-model ./my-project --format json -o threat-model.json
+```
+
+Identifies risks across all 6 STRIDE domains:
+- **Spoofing**: Missing authentication, JWT without signature checks, wildcard credentials.
+- **Tampering**: Parameterized queries absent, insecure deserialization, writable configurations.
+- **Repudiation**: Missing audit logging, untracked administrative modifications.
+- **Information Disclosure**: Hardcoded secrets, debug stack traces enabled, database port exposure.
+- **Denial of Service**: Unbounded regex, missing rate-limiting, missing container memory limits.
+- **Elevation of Privilege**: Container root execution, Docker socket mounts, SUID permissions.
+
+---
+
+### 📜 Git Commit History Secret Scanner (`secureship git-history`)
+
+Secrets accidentally committed in the past remain accessible in Git's object database even if deleted in subsequent commits. SecureShip audits historical commit diffs (`git log -p`) to identify leaked credentials across git history:
+
+```bash
+# Scan previous 50 commits (default: 50)
+secureship git-history ./my-project
+
+# Deep historical audit across all branches
+secureship git-history ./my-project --commits 200 --branch main
+```
+
+Outputs exact, automated purge remediation commands:
+```bash
+git filter-repo --invert-paths --path <leaked_file>
+# or using BFG Repo-Cleaner:
+bfg --delete-files <leaked_file>
+```
+
+---
+
+### 🔐 Secret Vault & Environment Migrator (`secureship vault`)
+
+SecureShip detects hardcoded API keys, database credentials, and cloud tokens, and migrates them directly into production-ready configuration payloads:
+
+```bash
+# Extract secrets and generate .env.example, HashiCorp Vault, & Kubernetes manifests
+secureship vault ./my-project -o ./vault-output
+```
+
+Generated artifacts:
+1. `.env.example`: Sanitized environment variable template with real values replaced by `<REQUIRED_SECRET_NAME>`.
+2. `vault-payload.json`: Ready-to-import HashiCorp Vault KV v2 secret payload (`vault kv put secret/...`).
+3. `k8s-secret.yaml`: Production-grade Kubernetes `v1/Secret` manifest with Base64-encoded placeholders.
+
+---
+
+### 🏷️ Dynamic README Security Badge Generator (`secureship badge`)
+
+Generate dynamic, pixel-perfect SVG status badges compliant with Shields.io specifications based on your repository's actual security score:
+
+```bash
+# Generate vector SVG badge for repository README
+secureship badge ./my-project -o security-badge.svg
+```
+
+Embed directly into your `README.md`:
+```markdown
+![SecureShip Security Score](security-badge.svg)
+```
+
+Color & Status thresholds:
+- Score $\ge 80$: `#4c1` (Bright Green) — `READY`
+- Score $60 - 79$: `#fe7d37` (Amber / Orange) — `NEEDS REVIEW`
+- Score $< 60$: `#e05d44` (Crimson Red) — `BLOCKED`
+
+---
+
+### 🐳 Deep Container & Dockerfile Security Inspector (`secureship container`)
+
+Audit container configuration files for production hardening, micro-segmentation, and layer optimization:
+
+```bash
+# Inspect single Dockerfile
+secureship container ./Dockerfile
+
+# Scan repository for all container configurations
+secureship container ./my-project
+```
+
+Deep container security checks:
+- **Missing Multi-Stage Builds**: Flags single-stage builds containing compilers, package managers, and source artifacts in production images.
+- **Dangerous SUID / SGID File Permissions**: Flags `chmod +s`, `chmod 4755`, and unchecked setuid binaries.
+- **Leaked Build Arguments (`ARG`)**: Detects sensitive build-args like `ARG AWS_KEY` or `ARG DB_PASS` that persist in image layer metadata.
+- **Package Manager Cache Bloat**: Enforces cleanup flags like `apt-get clean && rm -rf /var/lib/apt/lists/*`.
+- **Missing Container Healthchecks**: Flags missing `HEALTHCHECK` instructions that hinder orchestration recovery.
+
+---
+
 ### Multi-Format Reporting & Executive Ship Certificates
 
 Export findings in formats suited for developers, CI/CD pipelines, and leadership:
@@ -608,7 +709,17 @@ secureship config --github-token ghp_YourGitHubTokenHere
 | `secureship explain <RULE_ID>` | View exploit scenario and defensive code patch |
 | `secureship history` | Display persistent SQLite scan audit history and scores |
 | `secureship certificate ./my-app` | Generate print-ready Executive Audit Certificate |
-| `secureship install-hook` | Install automated Git pre-commit & pre-push gates |
+| `secureship protect` | Immunize `.gitignore` against 24+ sensitive extensions & unstage secrets |
+| `secureship threat-model` | Automated STRIDE threat modeling & risk matrix generation |
+| `secureship git-history` | Audit Git commit history diffs for leaked secrets & purge commands |
+| `secureship vault` | Extract hardcoded secrets to `.env.example`, Vault KV, & K8s Secrets |
+| `secureship badge` | Generate dynamic Shields.io-compliant vector SVG status badge |
+| `secureship container` | Deep container & Dockerfile security audit (multi-stage, SUID, ARG) |
+| `secureship fix` | Automated auto-remediation engine (preview `--dry-run` or `--apply`) |
+| `secureship sbom` | Generate CycloneDX v1.5 or SPDX v2.3 Software Bill of Materials |
+| `secureship compliance` | Benchmark repository against OWASP, PCI-DSS, SOC 2, or NIST |
+| `secureship init-ci` | Generate shift-left CI/CD workflows (GitHub, GitLab, Azure, Jenkins) |
+| `secureship install-hook` | Install automated Git pre-commit & pre-push gates with auto-protect |
 | `secureship bypass --push` | Issue audited emergency bypass token and execute `git push` |
 | `secureship update` | Fetch & install latest updates from GitHub |
 | `secureship update --token <PAT>` | Fetch updates from private GitHub repository |
@@ -705,9 +816,9 @@ Our test suite covers every scanner, confidence filter, quality gate, CLI comman
 pytest engine/tests -v
 ```
 
-All **50 unit and integration tests pass** with zero errors:
+All **75 unit and integration tests pass** with zero errors:
 ```text
-======================= 50 passed, 1 warning in 22.21s ========================
+======================= 75 passed, 1 warning in 23.65s ========================
 ```
 
 ---

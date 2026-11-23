@@ -5,15 +5,20 @@ from typer.testing import CliRunner
 from fastapi.testclient import TestClient
 
 from secureship import (
+    BadgeGenerator,
     CIGenerator,
     ComplianceEngine,
+    ContainerAuditor,
     Finding,
     FindingCategory,
+    GitHistoryScanner,
     RemediationEngine,
     SBOMGenerator,
     SecretProtector,
     SecureShipEngine,
     Severity,
+    ThreatModelingEngine,
+    VaultMigrator,
 )
 from secureship.cli import app as cli_app
 from secureship.server import app as fastapi_app
@@ -419,3 +424,123 @@ def test_api_protect_gitignore(tmp_path):
     assert res.status_code == 200
     assert res.json()["status"] == "PROTECTED"
     assert (tmp_path / ".gitignore").exists()
+
+
+# =============================================================================
+# 10. THREAT MODELING, GIT HISTORY, VAULT, BADGE & CONTAINER AUDITOR TESTS
+# =============================================================================
+
+def test_threat_modeling_engine(tmp_path):
+    dfile = tmp_path / "Dockerfile"
+    dfile.write_text("FROM python:3.11\nEXPOSE 22\nEXPOSE 8080\n", encoding="utf-8")
+
+    pyfile = tmp_path / "routes.py"
+    pyfile.write_text("""
+import pickle
+@app.get("/admin/users")
+def get_users():
+    return pickle.loads(raw_data)
+""", encoding="utf-8")
+
+    engine = ThreatModelingEngine(str(tmp_path))
+    rep = engine.analyze(tmp_path)
+
+    assert rep.total_threats > 0
+    categories = {t.category for t in rep.threats}
+    assert "Information Disclosure" in categories or "Tampering" in categories or "Elevation of Privilege" in categories
+    assert any("22" in p for p in rep.exposed_ports)
+    assert any("/admin/users" in ep for ep in rep.entrypoints)
+
+
+def test_vault_migrator(tmp_path):
+    findings = [
+        Finding(
+            id="f1",
+            rule_id="SEC-001",
+            title="AWS Access Key",
+            category=FindingCategory.SECRETS,
+            severity=Severity.CRITICAL,
+            file_path="config.py",
+            line_start=1,
+            line_end=1,
+            code_snippet='AWS_SECRET_KEY = "AKIAIOSFODNN7EXAMPLE"',
+            owasp_category="A07:2021",
+            cwe_id="CWE-798",
+            description="desc",
+            remediation="rem",
+        )
+    ]
+    migrator = VaultMigrator(str(tmp_path))
+    data = migrator.export(findings, out_dir=tmp_path)
+
+    assert data["secret_count"] == 1
+    assert "AWS_SECRET_KEY" in data["env_example"]
+    assert "AWS_SECRET_KEY" in data["vault_json"]["data"]
+    assert "kind: Secret" in data["k8s_yaml"]
+
+
+def test_badge_generator():
+    svg_pass = BadgeGenerator.generate_svg(95, "READY TO SHIP")
+    assert "<svg" in svg_pass
+    assert "#10b981" in svg_pass
+    assert "95% passing" in svg_pass
+
+    svg_block = BadgeGenerator.generate_svg(30, "BLOCKED")
+    assert "#ef4444" in svg_block
+    assert "30% blocked" in svg_block
+
+
+def test_container_auditor(tmp_path):
+    dfile = tmp_path / "Dockerfile"
+    dfile.write_text("""
+FROM node:18
+ARG GITHUB_TOKEN=secret
+RUN apt-get update && apt-get install -y gcc
+RUN chmod 4755 /bin/mytool
+CMD ["npm", "start"]
+""", encoding="utf-8")
+
+    auditor = ContainerAuditor(str(tmp_path))
+    findings = auditor.audit_file(dfile, "Dockerfile", dfile.read_text(encoding="utf-8"))
+    rule_ids = {f.rule_id for f in findings}
+
+    assert "CONTAINER-001" in rule_ids  # Single stage build
+    assert "CONTAINER-002" in rule_ids  # Missing HEALTHCHECK
+    assert "CONTAINER-003" in rule_ids  # ARG Secret
+    assert "CONTAINER-005" in rule_ids  # SUID bit
+
+
+def test_cli_threat_model_and_vault(tmp_path):
+    # Threat model CLI
+    res_tm = runner.invoke(cli_app, ["threat-model", str(tmp_path)])
+    assert res_tm.exit_code == 0
+    assert "STRIDE Threat Model" in res_tm.output
+
+    # Vault CLI
+    res_v = runner.invoke(cli_app, ["vault", str(tmp_path)])
+    assert res_v.exit_code == 0
+    assert "Secret Vault & Environment Migrator" in res_v.output
+
+    # Badge CLI
+    badge_file = tmp_path / "my-badge.svg"
+    res_b = runner.invoke(cli_app, ["badge", str(tmp_path), "-o", str(badge_file)])
+    assert res_b.exit_code == 0
+    assert badge_file.exists()
+
+
+def test_api_enterprise_endpoints(tmp_path):
+    # Threat model endpoint
+    res_tm = client.get(f"/api/threat-model?path={tmp_path}")
+    assert res_tm.status_code == 200
+    assert "threats" in res_tm.json()
+
+    # Badge endpoint
+    res_b = client.get("/api/badge.svg")
+    assert res_b.status_code == 200
+    assert "image/svg+xml" in res_b.headers["content-type"]
+    assert "<svg" in res_b.text
+
+    # Container audit endpoint
+    res_c = client.get(f"/api/container?path={tmp_path}")
+    assert res_c.status_code == 200
+    assert isinstance(res_c.json(), list)
